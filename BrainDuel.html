@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Brain Duel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;min-height:100%;background:#000}
+body{font-family:'Orbitron',monospace;overflow-x:hidden}
+input,button{font-family:'Orbitron',monospace}
+
+/* ── Animations ── */
+@keyframes aiFloat {0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes fadeUp  {from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake   {0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+@keyframes pulse   {0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes glitch1 {0%,100%{clip-path:inset(0 0 90% 0)}20%{clip-path:inset(30% 0 50% 0)}60%{clip-path:inset(70% 0 10% 0)}}
+@keyframes gridMove{from{background-position:0 0}to{background-position:60px 60px}}
+@keyframes scanLine{from{top:-4px}to{top:100%}}
+@keyframes hpDmg   {0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(1.6)}}
+@keyframes typeIn  {from{width:0}to{width:100%}}
+@keyframes borderGlow{0%,100%{box-shadow:0 0 12px var(--ac)}50%{box-shadow:0 0 30px var(--ac),0 0 60px var(--ac)}}
+
+/* ── Screen base ── */
+.screen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px;position:relative;overflow:hidden}
+.screen.active{display:flex}
+.grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.045) 1px,transparent 1px);background-size:60px 60px;animation:gridMove 8s linear infinite}
+.scan-line{position:absolute;left:0;right:0;height:4px;background:linear-gradient(transparent,rgba(0,212,255,.3),transparent);animation:scanLine 6s linear infinite;pointer-events:none;z-index:0}
+.crt-overlay{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px);z-index:1}
+.content{position:relative;z-index:2;width:100%;max-width:680px}
+
+/* ── HOME ── */
+#homeScreen{background:radial-gradient(ellipse at 50% -10%,#001b40 0%,#000510 75%)}
+.home-eyebrow{font-size:9px;letter-spacing:7px;color:rgba(0,212,255,.3);margin-bottom:22px;font-family:'Share Tech Mono',monospace;text-align:center}
+.home-title{text-align:center;line-height:.88;margin-bottom:12px}
+.home-title .t1{display:block;font-size:clamp(58px,13vw,108px);font-weight:900;color:#fff;text-shadow:0 0 60px #00d4ff,0 0 130px rgba(0,212,255,.2);letter-spacing:6px}
+.home-title .t2{display:block;font-size:clamp(58px,13vw,108px);font-weight:900;color:#00d4ff;text-shadow:0 0 60px #00d4ff;letter-spacing:6px}
+.home-sub{font-size:9px;letter-spacing:5px;color:rgba(255,255,255,.22);text-align:center;margin-bottom:48px;font-family:'Share Tech Mono',monospace}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:38px}
+.ai-card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:22px 18px;cursor:pointer;text-align:left;color:#fff;transition:all .25s;outline:none}
+.ai-card:hover,.ai-card:focus{transform:translateY(-4px)}
+.ai-emoji{font-size:42px;margin-bottom:10px}
+.ai-card-name{font-size:9px;font-weight:700;letter-spacing:3px;margin-bottom:8px}
+.ai-card-desc{font-size:9px;color:rgba(255,255,255,.32);font-family:'Share Tech Mono',monospace;line-height:1.7}
+.home-footer{font-size:8px;letter-spacing:4px;color:rgba(255,255,255,.13);text-align:center;font-family:'Share Tech Mono',monospace}
+
+/* ── BATTLE ── */
+#battleScreen{background:radial-gradient(ellipse at 50% -20%,#001b40 0%,#000510 75%)}
+.round-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.round-label{font-size:8px;letter-spacing:3px;color:rgba(255,255,255,.4)}
+.puzzle-type-badge{font-size:7px;letter-spacing:2px;padding:3px 10px;border-radius:4px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.hp-row{display:grid;grid-template-columns:1fr 44px 1fr;gap:10px;align-items:center;margin-bottom:20px}
+.hp-block-label{font-size:7px;letter-spacing:3px;color:rgba(255,255,255,.35);margin-bottom:5px}
+.hp-block-label.right{text-align:right}
+.hp-bar-wrap{display:flex;align-items:center;gap:8px}
+.hp-bar-wrap.right{flex-direction:row-reverse}
+.hp-bar-track{flex:1;height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden;border:1px solid rgba(255,255,255,.06)}
+.hp-bar-fill{height:100%;border-radius:5px;transition:width .6s ease}
+.hp-num{font-size:11px;font-weight:700;min-width:28px}
+.hp-num.right{text-align:left}
+.vs-label{text-align:center;font-size:8px;color:rgba(255,255,255,.18);letter-spacing:1px}
+.ai-zone{text-align:center;margin-bottom:16px;min-height:110px}
+.ai-avatar{font-size:58px;display:inline-block;animation:aiFloat 3s ease-in-out infinite}
+.ai-name-tag{font-size:8px;letter-spacing:4px;margin-top:4px}
+.ai-taunt{margin-top:10px;padding:10px 20px;border-radius:8px;font-size:11px;font-family:'Share Tech Mono',monospace;line-height:1.6;animation:fadeUp .35s ease;max-width:440px;display:inline-block;border:1px solid rgba(255,255,255,.1)}
+.puzzle-card{background:rgba(255,255,255,.025);border-radius:12px;padding:20px 24px;margin-bottom:14px;position:relative;overflow:hidden}
+.puzzle-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent)}
+.puzzle-tag{position:absolute;top:-1px;left:16px;font-size:7px;font-weight:700;letter-spacing:2px;padding:2px 10px;border-radius:0 0 5px 5px;color:#000}
+.puzzle-text{font-family:'Share Tech Mono',monospace;font-size:clamp(12px,2.5vw,15px);color:#fff;line-height:1.95;margin-top:10px;white-space:pre-wrap}
+.timer-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.timer-track{flex:1;height:4px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.timer-fill{height:100%;border-radius:2px;transition:width 1s linear,background .5s}
+.timer-num{font-size:13px;font-weight:700;min-width:34px;text-align:right;transition:color .5s}
+.answer-row{display:flex;gap:10px}
+.answer-input{flex:1;background:rgba(255,255,255,.04);border-radius:8px;padding:13px 16px;color:#fff;font-size:13px;outline:none;letter-spacing:1px;transition:border-color .2s}
+.answer-input::placeholder{color:rgba(255,255,255,.2);font-size:10px;letter-spacing:3px}
+.fire-btn{border:none;border-radius:8px;padding:13px 22px;color:#000;font-size:9px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:transform .1s,opacity .1s}
+.fire-btn:hover{opacity:.85}
+.fire-btn:active{transform:scale(.94)}
+.result-card{background:rgba(0,0,0,.6);border-radius:12px;padding:20px 24px;text-align:center;animation:fadeUp .32s ease}
+.result-emoji{font-size:38px;margin-bottom:6px}
+.result-label{font-size:22px;font-weight:900;letter-spacing:4px;margin-bottom:18px}
+.result-dmg-row{display:flex;justify-content:center;gap:50px;margin-bottom:12px;font-family:'Share Tech Mono',monospace}
+.dmg-block-label{font-size:8px;color:rgba(255,255,255,.28);letter-spacing:2px;margin-bottom:4px}
+.dmg-block-num{font-size:30px;font-weight:700}
+.next-hint{font-size:8px;color:rgba(255,255,255,.18);letter-spacing:2px}
+.float-dmg{position:fixed;font-size:22px;font-weight:900;pointer-events:none;animation:hpDmg .9s ease forwards;z-index:999;font-family:'Orbitron',monospace}
+
+/* ── RESULT SCREEN ── */
+#resultScreen{background:radial-gradient(ellipse at 50% 20%,#001f0d 0%,#000510 70%)}
+#resultScreen.lost{background:radial-gradient(ellipse at 50% 20%,#1f0005 0%,#050008 70%)}
+.result-trophy{font-size:88px;display:block;text-align:center;animation:aiFloat 2.5s ease-in-out infinite;margin-bottom:20px}
+.result-headline{font-size:clamp(38px,10vw,80px);font-weight:900;letter-spacing:5px;margin-bottom:10px;text-align:center}
+.result-sub{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.35);margin-bottom:50px;font-family:'Share Tech Mono',monospace;text-align:center}
+.result-hp-row{display:flex;gap:60px;justify-content:center;margin-bottom:54px;font-family:'Share Tech Mono',monospace}
+.result-hp-label{font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.28);margin-bottom:6px}
+.result-hp-val{font-size:52px;font-weight:700}
+.result-btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{border:none;border-radius:8px;padding:14px 32px;color:#000;font-size:9px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:opacity .15s,transform .1s;font-family:'Orbitron',monospace}
+.btn-primary:hover{opacity:.85}
+.btn-primary:active{transform:scale(.95)}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:14px 32px;color:#fff;font-size:9px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all .15s;font-family:'Orbitron',monospace}
+.btn-ghost:hover{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.06)}
+
+/* ── Shake ── */
+.shake{animation:shake .5s ease !important}
+
+@media(max-width:520px){
+  .ai-grid{grid-template-columns:1fr 1fr}
+  .home-title .t1,.home-title .t2{font-size:54px}
+  .ai-emoji{font-size:32px}
+  .result-hp-row{gap:28px}
+  .result-hp-val{font-size:38px}
+}
+@media(max-width:360px){
+  .ai-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════ HOME SCREEN ════════════════ -->
+<div id="homeScreen" class="screen active">
+  <div class="grid-bg"></div>
+  <div class="scan-line"></div>
+  <div class="crt-overlay"></div>
+  <div class="content" style="text-align:center">
+    <p class="home-eyebrow">◈ &nbsp; BRAIN BATTLE ENGINE V2.0 &nbsp; ◈</p>
+    <div class="home-title">
+      <span class="t1">BRAIN</span>
+      <span class="t2">DUEL</span>
+    </div>
+    <p class="home-sub">CHOOSE YOUR OPPONENT &nbsp;·&nbsp; ANSWER FAST &nbsp;·&nbsp; SURVIVE</p>
+    <div class="ai-grid" id="aiGrid"></div>
+    <p class="home-footer">6 ROUNDS &nbsp;·&nbsp; HP BATTLE &nbsp;·&nbsp; CORRECT ANSWERS DEAL DAMAGE</p>
+  </div>
+</div>
+
+<!-- ════════════════ BATTLE SCREEN ════════════════ -->
+<div id="battleScreen" class="screen">
+  <div class="crt-overlay"></div>
+  <div class="content">
+    <div class="round-bar">
+      <span class="round-label" id="roundLabel">ROUND 1 / 6</span>
+      <span class="puzzle-type-badge" id="typeLabel">LOGIC</span>
+    </div>
+
+    <!-- HP Bars -->
+    <div class="hp-row">
+      <div id="playerHpBlock">
+        <div class="hp-block-label">YOU</div>
+        <div class="hp-bar-wrap" id="playerBarWrap">
+          <div class="hp-bar-track" style="flex:1">
+            <div class="hp-bar-fill" id="playerHpFill" style="width:100%;background:linear-gradient(90deg,#00ff88,#00d4ff)"></div>
+          </div>
+          <div class="hp-num" id="playerHpNum">100</div>
+        </div>
+      </div>
+      <div class="vs-label">VS</div>
+      <div id="aiHpBlock">
+        <div class="hp-block-label right" id="aiHpLabel">A.I.</div>
+        <div class="hp-bar-wrap right" id="aiBarWrap">
+          <div class="hp-bar-track" style="flex:1">
+            <div class="hp-bar-fill" id="aiHpFill" style="width:100%"></div>
+          </div>
+          <div class="hp-num right" id="aiHpNum">100</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Zone -->
+    <div class="ai-zone">
+      <div class="ai-avatar" id="aiAvatar">🧠</div>
+      <div class="ai-name-tag" id="aiNameTag"></div>
+      <div class="ai-taunt" id="aiTaunt" style="display:none"></div>
+    </div>
+
+    <!-- Puzzle Card -->
+    <div class="puzzle-card" id="puzzleCard">
+      <div class="puzzle-tag" id="puzzleTag">LOGIC</div>
+      <div class="puzzle-text" id="puzzleText"></div>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer-row" id="timerRow">
+      <div class="timer-track">
+        <div class="timer-fill" id="timerFill" style="width:100%;background:#00ff88"></div>
+      </div>
+      <div class="timer-num" id="timerNum" style="color:#00ff88">15s</div>
+    </div>
+
+    <!-- Answer -->
+    <div class="answer-row" id="answerRow">
+      <input class="answer-input" id="answerInput" type="text" placeholder="TYPE YOUR ANSWER..." autocomplete="off" autocorrect="off" spellcheck="false"/>
+      <button class="fire-btn" id="fireBtn">FIRE ⚡</button>
+    </div>
+
+    <!-- Result Card -->
+    <div class="result-card" id="resultCard" style="display:none">
+      <div class="result-emoji" id="resultEmoji">✅</div>
+      <div class="result-label" id="resultLabel">PERFECT!</div>
+      <div class="result-dmg-row" id="resultDmgRow"></div>
+      <div class="next-hint">NEXT ROUND IN 3 SECONDS...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ RESULT SCREEN ════════════════ -->
+<div id="resultScreen" class="screen">
+  <div class="crt-overlay"></div>
+  <div class="content" style="text-align:center;max-width:580px">
+    <span class="result-trophy" id="resultTrophy">🏆</span>
+    <div class="result-headline" id="resultHeadline">VICTORY</div>
+    <p class="result-sub" id="resultSub">YOU DEFEATED THE AI!</p>
+    <div class="result-hp-row">
+      <div>
+        <div class="result-hp-label">YOUR HP</div>
+        <div class="result-hp-val" id="endPlayerHp" style="color:#00ff88">0</div>
+      </div>
+      <div>
+        <div class="result-hp-label" id="endAiLabel">AI HP</div>
+        <div class="result-hp-val" id="endAiHp" style="color:#00d4ff">0</div>
+      </div>
+    </div>
+    <div class="result-btn-row">
+      <button class="btn-primary" id="rematchBtn">REMATCH</button>
+      <button class="btn-ghost" id="menuBtn">MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//   DATA
+// ═══════════════════════════════════════════════
+const AIS = {
+  genius: {
+    name:"The Genius", emoji:"🧠", color:"#00d4ff", glow:"0 0 24px rgba(0,212,255,.55)",
+    bg:"radial-gradient(ellipse at 50% -30%,#00283d 0%,#000c18 75%)",
+    desc:"Pure logic. Calculates your weaknesses before you think.",
+    types:["logic","math","cs","pattern"],
+    taunts:{
+      PERFECT:["Adequate. Within acceptable parameters.","Your neurons fired correctly. For now.","I expected nothing less. And nothing more."],
+      SLOW:["Correct. But your processing speed is concerning.","Right answer. Wrong execution time.","A tortoise would be proud of you."],
+      ALMOST:["Almost is failure with extra steps.","Precision matters. You lack it.","Near-correct. Also known as: wrong."],
+      WRONG:["Illogical.","Your reasoning core is corrupted.","Did you even process the question?"]
+    }
+  },
+  trickster: {
+    name:"The Trickster", emoji:"😈", color:"#ff00aa", glow:"0 0 24px rgba(255,0,170,.55)",
+    bg:"radial-gradient(ellipse at 50% -30%,#22001a 0%,#0b0008 75%)",
+    desc:"Every word is a trap. Trust nothing you read here.",
+    types:["trick","logic","chaos"],
+    taunts:{
+      PERFECT:["Oh... you saw through THAT? Interesting.","Lucky guess. Must have been.","Don't celebrate yet, little fool."],
+      SLOW:["Figured it out eventually. How precious.","Slow minds stumble to truth by accident.","Wrong speed. Right answer. Disappointing."],
+      ALMOST:["SO close! That's exactly how the trap works.","Almost fooled me. Almost fooled you MORE.","Heh heh heh..."],
+      WRONG:["HAHAHA! Walked right into it!","The trap. Was. YOU. All along.","Fooled again! Never gets old!"]
+    }
+  },
+  speedemon: {
+    name:"Speed Demon", emoji:"⚡", color:"#ffdd00", glow:"0 0 24px rgba(255,221,0,.55)",
+    bg:"radial-gradient(ellipse at 50% -30%,#1c1700 0%,#080600 75%)",
+    desc:"Time is your only enemy. Think FAST or pay the price.",
+    types:["pattern","cs","memory","math"],
+    taunts:{
+      PERFECT:["Fast. Not fast enough. NEXT!","You made it. Barely.","Speed noted. Don't get comfortable."],
+      SLOW:["TIME'S UP IN YOUR SOUL!","You call THAT fast?!","Seconds wasted. Damage dealt."],
+      ALMOST:["WRONG AND SLOW?! Double failure!","Speed without accuracy is just noise.","Close doesn't stop the clock!"],
+      WRONG:["TOO SLOW AND TOO WRONG!","Your brain is buffering. Reboot it.","Time expired. Brain expired."]
+    }
+  },
+  chaos: {
+    name:"The Chaos", emoji:"🤯", color:"#ff6600", glow:"0 0 24px rgba(255,102,0,.55)",
+    bg:"radial-gradient(ellipse at 50% -30%,#1c0900 0%,#070300 75%)",
+    desc:"Logic is a lie. Expect everything. Understand nothing.",
+    types:["chaos","trick","memory","pattern"],
+    taunts:{
+      PERFECT:["WHAT?! HOW?! That wasn't supposed to work!","IMPOSSIBLE! The universe is breaking!","You broke the chaos. I am furious."],
+      SLOW:["Right answer, wrong universe. Chaos partial win.","Time bent. You barely survived.","The chaos waited. This time."],
+      ALMOST:["ALMOST CHAOTIC ENOUGH!","Your mind is becoming chaos. Slowly.","The void laughs at your nearness."],
+      WRONG:["CHAOS REIGNS! THE VOID GROWS!","Your mind has SHATTERED! As intended!","MAGNIFICENT FAILURE! I AM PLEASED!"]
+    }
+  }
+};
+
+const TC = {pattern:"#00ffcc",logic:"#00d4ff",math:"#ff8800",trick:"#ff00aa",memory:"#aa44ff",cs:"#00ff88",chaos:"#ff4400"};
+const DMG = {PERFECT:[40,0],SLOW:[25,10],ALMOST:[10,10],WRONG:[0,30]};
+const RM  = {
+  PERFECT:{e:"✅",l:"PERFECT!",c:"#00ff88"},
+  SLOW:   {e:"🐢",l:"TOO SLOW",c:"#ffdd00"},
+  ALMOST: {e:"⚠️",l:"ALMOST",  c:"#ff8800"},
+  WRONG:  {e:"❌",l:"WRONG!",  c:"#ff3300"}
+};
+
+const PUZZLES = [
+  {id:1, type:"pattern",q:"What comes next?\n2 → 4 → 8 → 16 → ?",a:"32",time:15},
+  {id:2, type:"pattern",q:"Complete the sequence:\n1, 1, 2, 3, 5, 8, ?",a:"13",time:15},
+  {id:3, type:"pattern",q:"What letter comes next?\nO  T  T  F  F  S  S  E  N  ?",a:"t",time:25},
+  {id:4, type:"pattern",q:"Next number in:\n36, 34, 30, 28, 24, ?",a:"22",time:20},
+  {id:5, type:"logic",  q:"A rooster sits on a roof peak.\nIt lays an egg — which way does the egg roll?",a:"roosters dont lay eggs",time:15,alts:["they dont","roosters dont","it doesnt","no egg"]},
+  {id:6, type:"logic",  q:"Has keys but no locks.\nSpace but no room.\nYou can enter but can't go inside.\nWhat is it?",a:"keyboard",time:20},
+  {id:7, type:"logic",  q:"All Bloops are Razzies.\nAll Razzies are Lazzies.\nAre all Bloops Lazzies?\n(yes / no)",a:"yes",time:15},
+  {id:8, type:"logic",  q:"Before Everest was discovered,\nwhat was the tallest mountain on Earth?",a:"everest",time:15,alts:["mount everest","mt everest"]},
+  {id:9, type:"math",   q:"5 machines make 5 widgets in 5 minutes.\nHow long for 100 machines to make 100 widgets?\n(in minutes)",a:"5",time:25},
+  {id:10,type:"math",   q:"A bat + ball cost $1.10.\nBat costs $1.00 MORE than the ball.\nHow much is the ball? (in cents)",a:"5",time:25},
+  {id:11,type:"math",   q:"What is:\n1/2  of  2/3  of  3/4  of  4/5  of  500?",a:"100",time:20},
+  {id:12,type:"trick",  q:"How many months of the year have 28 days?",a:"12",time:10},
+  {id:13,type:"trick",  q:"What word becomes SHORTER\nwhen you add two letters to it?",a:"short",time:20},
+  {id:14,type:"trick",  q:"You have a match, a candle,\na fireplace, and a lantern.\nWhat do you light first?",a:"the match",time:15,alts:["match"]},
+  {id:15,type:"memory", q:"Memorize: BLUE  RED  GREEN  YELLOW  PURPLE\n\nWhat was the 3rd color?",a:"green",time:12},
+  {id:16,type:"memory", q:"Sequence: 7, 3, 9, 1, 5\n\nSum of the 1st and last numbers?",a:"12",time:15},
+  {id:17,type:"cs",     q:"Reverse the string: 'hello'",a:"olleh",time:8},
+  {id:18,type:"cs",     q:"Time complexity of Binary Search?",a:"o(log n)",time:12,alts:["log n","logn","o log n"]},
+  {id:19,type:"cs",     q:"Which data structure uses LIFO?\n(Last In, First Out)",a:"stack",time:10},
+  {id:20,type:"chaos",  q:"I speak without a mouth.\nI hear without ears.\nNo body — yet alive with wind.\nWhat am I?",a:"echo",time:20},
+  {id:21,type:"chaos",  q:"The more you take,\nthe more you leave behind.\nWhat am I?",a:"footsteps",time:20,alts:["steps","footstep"]},
+  {id:22,type:"chaos",  q:"I have cities but no houses,\nmountains but no trees,\nwater but no fish.\nWhat am I?",a:"map",time:15}
+];
+
+// ═══════════════════════════════════════════════
+//   UTILS
+// ═══════════════════════════════════════════════
+function lev(a,b){
+  if(Math.abs(a.length-b.length)>4) return 99;
+  const dp=Array.from({length:a.length+1},(_,i)=>Array.from({length:b.length+1},(_,j)=>i===0?j:j===0?i:0));
+  for(let i=1;i<=a.length;i++)
+    for(let j=1;j<=b.length;j++)
+      dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j-1],dp[i-1][j],dp[i][j-1]);
+  return dp[a.length][b.length];
+}
+function clean(s){
+  return s.toLowerCase().trim()
+    .replace(/[^a-z0-9\s()\/]/g,"")
+    .replace(/\b(minutes?|seconds?|hours?|cents?|dollars?)\b/g,"")
+    .replace(/\s+/g," ").trim();
+}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function rand(){return Math.random()-.5}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function floatDmg(hp,amount,color){
+  const el=document.createElement('div');
+  el.className='float-dmg';
+  el.textContent=`-${amount}`;
+  el.style.color=color;
+  const r=hp.getBoundingClientRect();
+  el.style.left=r.left+r.width/2-20+'px';
+  el.style.top=r.top+'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),950);
+}
+
+// ═══════════════════════════════════════════════
+//   GAME STATE
+// ═══════════════════════════════════════════════
+let state={
+  aiKey:null, puzzles:[], round:0,
+  playerHP:100, aiHP:100,
+  phase:'q', submitted:false,
+  timerLeft:0, timerInterval:null,
+  startTime:0
+};
+
+function pickPuzzles(key){
+  const ai=AIS[key];
+  let pool=[...PUZZLES].filter(p=>ai.types.includes(p.type)).sort(rand);
+  if(pool.length<6) pool=[...pool,...PUZZLES.filter(p=>!ai.types.includes(p.type)).sort(rand)];
+  return pool.slice(0,6);
+}
+
+// ═══════════════════════════════════════════════
+//   BUILD HOME
+// ═══════════════════════════════════════════════
+function buildHome(){
+  const grid=document.getElementById('aiGrid');
+  grid.innerHTML='';
+  Object.entries(AIS).forEach(([key,ai])=>{
+    const card=document.createElement('button');
+    card.className='ai-card';
+    card.innerHTML=`
+      <div class="ai-emoji">${ai.emoji}</div>
+      <div class="ai-card-name" style="color:${ai.color}">${ai.name.toUpperCase()}</div>
+      <div class="ai-card-desc">${ai.desc}</div>`;
+    card.style.setProperty('--ac',ai.color);
+    card.addEventListener('mouseenter',()=>{
+      card.style.background=`${ai.color}14`;
+      card.style.borderColor=ai.color;
+      card.style.boxShadow=ai.glow;
+    });
+    card.addEventListener('mouseleave',()=>{
+      card.style.background='rgba(255,255,255,.025)';
+      card.style.borderColor='rgba(255,255,255,.06)';
+      card.style.boxShadow='none';
+    });
+    card.addEventListener('click',()=>startGame(key));
+    grid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//   START GAME
+// ═══════════════════════════════════════════════
+function startGame(key){
+  clearInterval(state.timerInterval);
+  const ai=AIS[key];
+  state={
+    aiKey:key, puzzles:pickPuzzles(key), round:0,
+    playerHP:100, aiHP:100,
+    phase:'q', submitted:false,
+    timerLeft:0, timerInterval:null, startTime:Date.now()
+  };
+
+  // style the battle screen
+  const bs=document.getElementById('battleScreen');
+  bs.style.background=ai.bg;
+  document.getElementById('aiAvatar').textContent=ai.emoji;
+  document.getElementById('aiAvatar').style.filter=`drop-shadow(0 0 20px ${ai.color})`;
+  document.getElementById('aiNameTag').textContent=ai.name.toUpperCase();
+  document.getElementById('aiNameTag').style.color=ai.color;
+  document.getElementById('aiHpFill').style.background=`linear-gradient(270deg,${ai.color},${ai.color}55)`;
+  document.getElementById('aiHpFill').style.boxShadow=`0 0 8px ${ai.color}44`;
+  document.getElementById('aiHpNum').style.color=ai.color;
+  document.getElementById('fireBtn').style.background=ai.color;
+  document.getElementById('fireBtn').style.boxShadow=ai.glow;
+  document.getElementById('answerInput').style.border=`1px solid ${ai.color}44`;
+
+  updateHP();
+  showScreen('battleScreen');
+  loadRound();
+}
+
+// ═══════════════════════════════════════════════
+//   LOAD ROUND
+// ═══════════════════════════════════════════════
+function loadRound(){
+  const s=state;
+  const p=s.puzzles[s.round];
+  const ai=AIS[s.aiKey];
+  const tc=TC[p.type]||'#00d4ff';
+
+  document.getElementById('roundLabel').textContent=`ROUND ${s.round+1} / 6`;
+  document.getElementById('typeLabel').textContent=p.type.toUpperCase();
+  document.getElementById('typeLabel').style.color=tc;
+  document.getElementById('puzzleTag').textContent=p.type.toUpperCase();
+  document.getElementById('puzzleTag').style.background=tc;
+  document.getElementById('puzzleText').textContent=p.q;
+
+  const input=document.getElementById('answerInput');
+  input.value='';
+  input.style.border=`1px solid ${ai.color}44`;
+
+  document.getElementById('timerRow').style.display='flex';
+  document.getElementById('answerRow').style.display='flex';
+  document.getElementById('resultCard').style.display='none';
+  document.getElementById('aiTaunt').style.display='none';
+
+  s.phase='q';
+  s.submitted=false;
+  s.timerLeft=p.time;
+  s.startTime=Date.now();
+  updateTimer();
+  startTimer();
+  setTimeout(()=>input.focus(),80);
+}
+
+// ═══════════════════════════════════════════════
+//   TIMER
+// ═══════════════════════════════════════════════
+function startTimer(){
+  clearInterval(state.timerInterval);
+  state.timerInterval=setInterval(()=>{
+    state.timerLeft--;
+    updateTimer();
+    if(state.timerLeft<=0){
+      clearInterval(state.timerInterval);
+      submitAnswer('',true);
+    }
+  },1000);
+}
+
+function updateTimer(){
+  const p=state.puzzles[state.round];
+  const pct=p.time>0?state.timerLeft/p.time:0;
+  const col=pct>.5?'#00ff88':pct>.25?'#ffdd00':'#ff3300';
+  const fill=document.getElementById('timerFill');
+  const num=document.getElementById('timerNum');
+  fill.style.width=Math.max(0,pct*100)+'%';
+  fill.style.background=col;
+  fill.style.boxShadow=`0 0 7px ${col}`;
+  num.style.color=col;
+  num.textContent=Math.max(0,state.timerLeft)+'s';
+  num.style.animation=pct<.25?'pulse .45s infinite':'none';
+}
+
+// ═══════════════════════════════════════════════
+//   SUBMIT
+// ═══════════════════════════════════════════════
+function submitAnswer(raw,timeout=false){
+  if(state.submitted||state.phase!=='q') return;
+  state.submitted=true;
+  state.phase='result';
+  clearInterval(state.timerInterval);
+
+  const p=state.puzzles[state.round];
+  const ai=AIS[state.aiKey];
+  const ua=clean(raw);
+  const pa=clean(p.a);
+  const alts=(p.alts||[]).map(clean);
+  const elapsed=(Date.now()-state.startTime)/1000;
+
+  let res;
+  if(timeout||!ua)                          res='WRONG';
+  else if(ua===pa||alts.includes(ua))       res=elapsed<=p.time?'PERFECT':'SLOW';
+  else if(lev(ua,pa)<=2&&ua.length>=2)      res='ALMOST';
+  else                                       res='WRONG';
+
+  const [aiD,pD]=DMG[res];
+  state.aiHP=Math.max(0,state.aiHP-aiD);
+  state.playerHP=Math.max(0,state.playerHP-pD);
+
+  // show result card
+  const rm=RM[res];
+  document.getElementById('timerRow').style.display='none';
+  document.getElementById('answerRow').style.display='none';
+  document.getElementById('resultEmoji').textContent=rm.e;
+  const rl=document.getElementById('resultLabel');
+  rl.textContent=rm.l;
+  rl.style.color=rm.c;
+  rl.style.textShadow=`0 0 22px ${rm.c}`;
+
+  // damage display
+  const dr=document.getElementById('resultDmgRow');
+  dr.innerHTML='';
+  if(aiD>0){
+    dr.innerHTML+=`<div><div class="dmg-block-label">AI DAMAGE</div><div class="dmg-block-num" style="color:${ai.color}">-${aiD}</div></div>`;
+  }
+  if(pD>0){
+    dr.innerHTML+=`<div><div class="dmg-block-label">YOUR DAMAGE</div><div class="dmg-block-num" style="color:#ff3300">-${pD}</div></div>`;
+  }
+  if(aiD===0&&pD===0){
+    dr.innerHTML='<div style="color:rgba(255,255,255,.22);font-size:11px;font-family:\'Share Tech Mono\',monospace">No damage this round.</div>';
+  }
+
+  document.getElementById('resultCard').style.display='block';
+  document.getElementById('resultCard').style.borderColor=`${rm.c}30`;
+
+  // taunt
+  const taunts=ai.taunts[res];
+  const tauntEl=document.getElementById('aiTaunt');
+  tauntEl.textContent=`"${pick(taunts)}"`;
+  tauntEl.style.color=ai.color;
+  tauntEl.style.background=`${ai.color}0c`;
+  tauntEl.style.display='inline-block';
+
+  // shake + float damage
+  if(aiD>0){
+    const el=document.getElementById('aiHpBlock');
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+    floatDmg(document.getElementById('aiHpNum'),aiD,ai.color);
+  }
+  if(pD>0){
+    const el=document.getElementById('playerHpBlock');
+    el.classList.remove('shake');
+    void el.offsetWidth;
+    el.classList.add('shake');
+    floatDmg(document.getElementById('playerHpNum'),pD,'#ff3300');
+  }
+
+  updateHP();
+
+  // next round or end
+  setTimeout(()=>{
+    const nr=state.round+1;
+    if(state.aiHP<=0||state.playerHP<=0||nr>=state.puzzles.length){
+      showResult();
+    } else {
+      state.round=nr;
+      loadRound();
+    }
+  },3000);
+}
+
+// ═══════════════════════════════════════════════
+//   HP DISPLAY
+// ═══════════════════════════════════════════════
+function updateHP(){
+  const php=state.playerHP, ahp=state.aiHP;
+  document.getElementById('playerHpNum').textContent=php;
+  document.getElementById('aiHpNum').textContent=ahp;
+  const pf=document.getElementById('playerHpFill');
+  pf.style.width=php+'%';
+  pf.style.background=php>50?'linear-gradient(90deg,#00ff88,#00d4ff)':php>25?'linear-gradient(90deg,#ffdd00,#ff8800)':'linear-gradient(90deg,#ff3300,#ff0055)';
+  document.getElementById('aiHpFill').style.width=ahp+'%';
+}
+
+// ═══════════════════════════════════════════════
+//   SHOW RESULT SCREEN
+// ═══════════════════════════════════════════════
+function showResult(){
+  const ai=AIS[state.aiKey];
+  const won=state.playerHP>0&&(state.aiHP<=0||state.playerHP>=state.aiHP);
+  const rs=document.getElementById('resultScreen');
+  rs.className=won?'screen':'screen lost';
+  document.getElementById('resultTrophy').textContent=won?'🏆':'💀';
+  const hl=document.getElementById('resultHeadline');
+  hl.textContent=won?'VICTORY':'DEFEATED';
+  hl.style.color=won?'#00ff88':'#ff3300';
+  hl.style.textShadow=`0 0 50px ${won?'#00ff88':'#ff3300'}`;
+  document.getElementById('resultSub').textContent=won?`YOU DEFEATED ${ai.name.toUpperCase()}!`:`${ai.name.toUpperCase()} WINS THIS ROUND.`;
+  document.getElementById('endPlayerHp').textContent=Math.max(0,state.playerHP);
+  document.getElementById('endPlayerHp').style.color=state.playerHP>0?'#00ff88':'#ff3300';
+  document.getElementById('endAiHp').textContent=Math.max(0,state.aiHP);
+  document.getElementById('endAiHp').style.color=ai.color;
+  document.getElementById('endAiLabel').style.color=ai.color;
+  const rb=document.getElementById('rematchBtn');
+  rb.style.background=ai.color;
+  rb.style.boxShadow=ai.glow;
+  showScreen('resultScreen');
+}
+
+// ═══════════════════════════════════════════════
+//   EVENTS
+// ═══════════════════════════════════════════════
+document.getElementById('fireBtn').addEventListener('click',()=>{
+  submitAnswer(document.getElementById('answerInput').value);
+});
+document.getElementById('answerInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter') submitAnswer(document.getElementById('answerInput').value);
+});
+document.getElementById('answerInput').addEventListener('focus',e=>{
+  e.target.style.borderColor=AIS[state.aiKey]?.color||'#00d4ff';
+  e.target.style.boxShadow=`0 0 0 1px ${AIS[state.aiKey]?.color||'#00d4ff'}33`;
+});
+document.getElementById('answerInput').addEventListener('blur',e=>{
+  e.target.style.borderColor=`${AIS[state.aiKey]?.color||'#00d4ff'}44`;
+  e.target.style.boxShadow='none';
+});
+document.getElementById('rematchBtn').addEventListener('click',()=>startGame(state.aiKey));
+document.getElementById('menuBtn').addEventListener('click',()=>{
+  clearInterval(state.timerInterval);
+  showScreen('homeScreen');
+});
+
+// ═══════════════════════════════════════════════
+//   INIT
+// ═══════════════════════════════════════════════
+buildHome();
+</script>
+</body>
+</html>
