@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>💣 Boom Equation</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:#F0F4FF;
+  --white:#fff;
+  --green-bg:#D4EDDA;
+  --green-dark:#2e7d32;
+  --green-btn:#4CAF50;
+  --blue-bg:#CCE5FF;
+  --blue-dark:#1565c0;
+  --orange:#FF8C42;
+  --yellow:#FFD166;
+  --red:#FF6B6B;
+  --gray:#F1F3F8;
+  --text:#2D3250;
+  --muted:#8a90b0;
+  --radius:18px;
+  --shadow:0 4px 20px rgba(0,0,0,0.09);
+  --shadow-sm:0 2px 10px rgba(0,0,0,0.07);
+}
+
+body{
+  font-family:'Nunito',sans-serif;
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:20px 14px 50px;
+  position:relative;
+  overflow-x:hidden;
+}
+
+/* ── BACKGROUND BLOBS ── */
+body::before,body::after{
+  content:'';
+  position:fixed;
+  border-radius:50%;
+  filter:blur(70px);
+  opacity:0.35;
+  pointer-events:none;
+  z-index:0;
+}
+body::before{
+  width:380px;height:380px;
+  background:radial-gradient(circle,#FFD166,#FF8C42);
+  top:-80px;right:-80px;
+}
+body::after{
+  width:320px;height:320px;
+  background:radial-gradient(circle,#a8d8ff,#c3b1ff);
+  bottom:-60px;left:-60px;
+}
+
+#game-root{width:100%;max-width:450px;position:relative;z-index:1;}
+
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* ══════════════════════════════
+   TITLE
+══════════════════════════════ */
+.game-title{
+  text-align:center;
+  margin-bottom:18px;
+}
+.game-title h1{
+  font-size:30px;
+  font-weight:900;
+  background:linear-gradient(135deg,#FFD166 0%,#FF8C42 60%,#ff6b6b 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 2px 6px rgba(255,140,66,0.3));
+  letter-spacing:-0.5px;
+  line-height:1.1;
+}
+.game-title .tagline{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:5px;
+  font-weight:600;
+}
+
+/* ══════════════════════════════
+   CARD BASE
+══════════════════════════════ */
+.card{
+  background:var(--white);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:18px 20px;
+  margin-bottom:14px;
+}
+.card-label{
+  font-size:11px;font-weight:800;
+  letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;
+}
+
+/* ══════════════════════════════
+   LEVEL + PROGRESS ROW
+══════════════════════════════ */
+.top-row{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+.level-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:6px 14px;border-radius:30px;
+  font-size:12px;font-weight:800;letter-spacing:0.5px;
+}
+.lv-easy  {background:#e8f5e9;color:#2e7d32;}
+.lv-medium{background:#fff8e1;color:#f57f17;}
+.lv-hard  {background:#fff3e0;color:#e65100;}
+.lv-expert{background:#fce4ec;color:#c62828;}
+
+.dots{display:flex;gap:7px;}
+.dot{
+  width:11px;height:11px;border-radius:50%;
+  background:#dde2f0;transition:all 0.3s;
+}
+.dot.done   {background:var(--green-btn);transform:scale(1.1);}
+.dot.current{background:var(--orange);transform:scale(1.2);box-shadow:0 0 0 3px rgba(255,140,66,0.25);}
+
+/* ══════════════════════════════
+   TARGET CARD
+══════════════════════════════ */
+.target-card{
+  background:linear-gradient(135deg,#e8f5e9 0%,#D4EDDA 100%);
+  border:2px solid #b2dfdb;
+  text-align:center;
+  padding:20px;
+  position:relative;
+  overflow:hidden;
+}
+.target-card::before{
+  content:'✨';
+  position:absolute;top:10px;right:14px;
+  font-size:20px;opacity:0.6;
+  animation:sparkle 2s ease-in-out infinite;
+}
+@keyframes sparkle{
+  0%,100%{transform:scale(1) rotate(0deg);opacity:0.6;}
+  50%{transform:scale(1.3) rotate(20deg);opacity:1;}
+}
+
+.target-top{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:10px;
+}
+.target-bomb{font-size:28px;animation:bombWiggle 2.5s ease-in-out infinite;}
+@keyframes bombWiggle{
+  0%,100%{transform:rotate(-5deg);}
+  50%{transform:rotate(5deg);}
+}
+.target-number{
+  font-size:68px;font-weight:900;
+  color:var(--green-dark);line-height:1;
+  letter-spacing:-2px;
+  text-shadow:0 3px 10px rgba(46,125,50,0.2);
+}
+.target-timer{
+  margin-top:12px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.timer-label{
+  font-size:12px;font-weight:700;
+  color:#4a7c59;letter-spacing:0.5px;
+}
+.timer-num{
+  font-size:20px;font-weight:900;
+  color:var(--green-dark);min-width:34px;text-align:center;
+}
+.timer-num.warn  {color:#f57f17;}
+.timer-num.danger{color:var(--red);animation:pulse 0.7s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+
+.timer-bar-bg{
+  flex:1;max-width:160px;
+  height:9px;background:#c8e6c9;
+  border-radius:8px;overflow:hidden;
+}
+.timer-bar-fill{
+  height:100%;border-radius:8px;
+  background:linear-gradient(90deg,#66bb6a,#43a047);
+  transition:width 1s linear,background 0.4s;
+}
+.timer-bar-fill.warn  {background:linear-gradient(90deg,#ffb74d,#ffa726);}
+.timer-bar-fill.danger{background:linear-gradient(90deg,#ef5350,#e53935);}
+
+/* ══════════════════════════════
+   DIGITS
+══════════════════════════════ */
+.digits-card{padding:16px 18px;}
+.digits-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.digit-chip{
+  width:54px;height:54px;
+  background:linear-gradient(135deg,#e3f0ff,var(--blue-bg));
+  border:2px solid #b3d4ff;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:800;color:var(--blue-dark);
+  box-shadow:0 3px 10px rgba(21,101,192,0.12);
+  transition:transform 0.15s,box-shadow 0.15s,border-color 0.15s;
+  cursor:default;user-select:none;
+}
+.digit-chip:hover{
+  transform:translateY(-4px) scale(1.06);
+  box-shadow:0 8px 20px rgba(21,101,192,0.2);
+  border-color:#80b3ff;
+}
+
+/* ══════════════════════════════
+   EQUATION DISPLAY
+══════════════════════════════ */
+.equation-card{padding:14px 18px;}
+.equation-wrap{
+  background:var(--gray);
+  border:2px solid #e2e6f5;border-radius:14px;
+  min-height:60px;padding:12px 16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:800;
+  color:var(--text);letter-spacing:2px;
+  text-align:center;word-break:break-all;
+  transition:border-color 0.25s,background 0.25s;
+  position:relative;
+}
+.equation-wrap.active {border-color:#80b3ff;background:#f0f5ff;}
+.equation-wrap.correct{border-color:#66bb6a;background:#f1fff4;color:#2e7d32;}
+.equation-wrap.wrong  {border-color:var(--red);background:#fff5f5;color:#c62828;animation:shake 0.35s;}
+.equation-wrap.placeholder{font-size:14px;font-weight:600;color:#b0b5c8;letter-spacing:0;}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  25%{transform:translateX(-8px);}
+  75%{transform:translateX(8px);}
+}
+
+.eq-emoji{
+  position:absolute;right:14px;
+  font-size:20px;
+  transition:opacity 0.3s;
+}
+
+.toast{
+  text-align:center;font-size:13px;font-weight:700;
+  min-height:24px;padding:5px 0;
+  transition:all 0.2s;
+}
+.toast.ok  {color:#2e7d32;}
+.toast.err {color:var(--red);}
+.toast.info{color:var(--muted);}
+
+/* ══════════════════════════════
+   KEYPAD
+══════════════════════════════ */
+.keypad-card{padding:16px 18px;}
+.keypad-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+}
+.key-btn{
+  height:56px;border:none;border-radius:14px;
+  font-family:'Nunito',sans-serif;font-size:20px;font-weight:800;
+  cursor:pointer;outline:none;
+  transition:transform 0.12s,box-shadow 0.12s;
+  position:relative;overflow:hidden;
+}
+.key-btn::after{
+  content:'';position:absolute;inset:0;
+  background:rgba(255,255,255,0);
+  transition:background 0.15s;
+}
+.key-btn:hover::after{background:rgba(255,255,255,0.25);}
+.key-btn:active{transform:scale(0.92);}
+
+.key-num{
+  background:linear-gradient(135deg,#fff,#f0f4ff);
+  color:var(--text);
+  box-shadow:0 3px 10px rgba(0,0,0,0.09),0 1px 3px rgba(0,0,0,0.05);
+  border:1.5px solid #e2e6f5;
+}
+.key-num:hover{
+  transform:translateY(-3px) scale(1.04);
+  box-shadow:0 8px 18px rgba(58,58,255,0.13);
+  border-color:#b3c6ff;
+}
+
+.key-op{
+  background:linear-gradient(135deg,#fff3e0,#ffe0b2);
+  color:#e65100;
+  box-shadow:0 3px 10px rgba(255,140,66,0.18);
+  border:1.5px solid #ffcc80;
+  font-size:22px;
+}
+.key-op:hover{
+  transform:translateY(-3px) scale(1.04);
+  box-shadow:0 8px 18px rgba(255,140,66,0.28);
+}
+
+.key-zero{grid-column:span 2;}
+
+/* ══════════════════════════════
+   CLEAR STRIP
+══════════════════════════════ */
+.btn-clear{
+  width:100%;height:36px;
+  background:transparent;
+  color:#b0b5c8;
+  border:1.5px dashed #dde2f0;border-radius:10px;
+  font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;
+  cursor:pointer;letter-spacing:0.8px;
+  margin-bottom:10px;
+  transition:color 0.15s,border-color 0.15s,background 0.15s;
+}
+.btn-clear:hover{color:var(--red);border-color:var(--red);background:#fff5f5;}
+
+/* ══════════════════════════════
+   SUBMIT / UNDO
+══════════════════════════════ */
+.actions-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+
+.btn-submit{
+  height:56px;
+  background:linear-gradient(135deg,#66bb6a,#43a047);
+  color:#fff;border:none;border-radius:16px;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;
+  cursor:pointer;letter-spacing:0.3px;
+  box-shadow:0 5px 18px rgba(76,175,80,0.38);
+  transition:transform 0.12s,box-shadow 0.12s;
+}
+.btn-submit:hover{
+  transform:translateY(-3px);
+  box-shadow:0 10px 26px rgba(76,175,80,0.5);
+}
+.btn-submit:active{transform:scale(0.96);}
+
+.btn-undo{
+  height:56px;
+  background:linear-gradient(135deg,#fff,#f0f2fa);
+  color:#5a5f7a;border:2px solid #dde2f0;border-radius:16px;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,0.07);
+  transition:transform 0.12s,box-shadow 0.12s,color 0.15s,border-color 0.15s;
+}
+.btn-undo:hover{
+  transform:translateY(-3px);
+  border-color:var(--red);color:var(--red);
+  box-shadow:0 8px 20px rgba(255,107,107,0.2);
+}
+.btn-undo:active{transform:scale(0.96);}
+
+/* ══════════════════════════════
+   FOOTER (Score only now)
+══════════════════════════════ */
+.footer-bar{
+  display:flex;justify-content:center;
+  margin-bottom:14px;
+}
+.score-card{
+  background:var(--white);
+  border-radius:16px;
+  box-shadow:var(--shadow-sm);
+  padding:12px 32px;
+  text-align:center;
+  display:flex;align-items:center;gap:10px;
+}
+.score-card .fi-label{font-size:11px;font-weight:800;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;}
+.score-card .fi-value{font-size:26px;font-weight:900;color:var(--orange);}
+
+/* ══════════════════════════════
+   WELCOME SCREEN
+══════════════════════════════ */
+.welcome-card{
+  background:var(--white);border-radius:22px;
+  box-shadow:0 6px 30px rgba(0,0,0,0.1);
+  padding:30px 26px;text-align:center;
+}
+.welcome-card h2{font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.welcome-card p{font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:20px;}
+
+.how-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;text-align:left;}
+.how-item{
+  background:var(--bg);border-radius:14px;padding:13px;
+  transition:transform 0.2s;
+}
+.how-item:hover{transform:translateY(-2px);}
+.hi-icon{font-size:22px;margin-bottom:5px;}
+.hi-title{font-size:13px;font-weight:800;color:var(--text);}
+.hi-desc{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;}
+
+.name-input{
+  width:100%;border:2px solid #e2e6f5;border-radius:14px;
+  padding:13px 16px;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:600;
+  color:var(--text);outline:none;background:var(--bg);
+  margin-bottom:14px;
+  transition:border-color 0.2s,background 0.2s;
+}
+.name-input:focus{border-color:var(--orange);background:#fff;}
+.name-input::placeholder{color:#b0b5c8;}
+
+.btn-start{
+  width:100%;height:54px;
+  background:linear-gradient(135deg,#FFD166,#FF8C42);
+  color:#fff;border:none;border-radius:16px;
+  font-family:'Nunito',sans-serif;font-size:17px;font-weight:800;
+  cursor:pointer;
+  box-shadow:0 5px 18px rgba(255,140,66,0.4);
+  letter-spacing:0.3px;
+  transition:transform 0.12s,box-shadow 0.12s;
+}
+.btn-start:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(255,140,66,0.5);}
+.btn-start:active{transform:scale(0.97);}
+
+/* ══════════════════════════════
+   RESULT SCREEN
+══════════════════════════════ */
+.result-card{
+  background:var(--white);border-radius:22px;
+  box-shadow:0 6px 30px rgba(0,0,0,0.1);
+  padding:28px 24px;text-align:center;margin-bottom:14px;
+}
+.result-emoji-big{font-size:72px;line-height:1;margin-bottom:10px;animation:bounceIn 0.6s;}
+@keyframes bounceIn{
+  0%{transform:scale(0.4);opacity:0;}
+  70%{transform:scale(1.15);}
+  100%{transform:scale(1);opacity:1;}
+}
+.result-title{font-size:26px;font-weight:900;margin-bottom:4px;}
+.result-sub{font-size:14px;color:var(--muted);margin-bottom:18px;}
+.score-pill{
+  display:inline-block;
+  background:linear-gradient(135deg,#fff8e1,#ffe0b2);
+  color:var(--orange);
+  font-size:30px;font-weight:900;
+  padding:10px 30px;border-radius:18px;
+  margin-bottom:4px;letter-spacing:-0.5px;
+  box-shadow:0 3px 12px rgba(255,140,66,0.2);
+}
+
+.lb-card{
+  background:var(--white);border-radius:18px;
+  box-shadow:var(--shadow-sm);
+  padding:16px 20px;margin-bottom:14px;
+}
+.lb-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;border-bottom:1px solid #f0f2fb;font-size:15px;
+}
+.lb-row:last-child{border-bottom:none;}
+.lb-left{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);}
+.lb-right{font-weight:800;color:var(--orange);}
+
+.btn-play-again{
+  width:100%;height:54px;
+  background:linear-gradient(135deg,#66bb6a,#43a047);
+  color:#fff;border:none;border-radius:16px;
+  font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;
+  cursor:pointer;
+  box-shadow:0 5px 18px rgba(76,175,80,0.35);
+  transition:transform 0.12s,box-shadow 0.12s;
+}
+.btn-play-again:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(76,175,80,0.45);}
+
+/* ══════════════════════════════
+   CONFETTI
+══════════════════════════════ */
+.confetti-piece{
+  position:fixed;
+  width:10px;height:10px;
+  border-radius:2px;
+  opacity:0;
+  pointer-events:none;
+  z-index:9999;
+  animation:confettiFall 2.5s ease-in forwards;
+}
+@keyframes confettiFall{
+  0%  {transform:translateY(-20px) rotate(0deg);opacity:1;}
+  80% {opacity:1;}
+  100%{transform:translateY(100vh) rotate(720deg);opacity:0;}
+}
+
+/* ══════════════════════════════
+   SPARKLE OVERLAY
+══════════════════════════════ */
+.sparkle{
+  position:absolute;pointer-events:none;
+  font-size:18px;
+  animation:sparklePop 0.7s ease-out forwards;
+  z-index:10;
+}
+@keyframes sparklePop{
+  0%  {transform:scale(0) translate(0,0);opacity:1;}
+  100%{transform:scale(1.5) translate(var(--tx),var(--ty));opacity:0;}
+}
+</style>
+</head>
+<body>
+<div id="game-root">
+
+  <!-- ═══════════════ WELCOME ═══════════════ -->
+  <div id="screen-welcome" class="screen active">
+    <div class="game-title">
+      <h1>💣 Boom Equation 💡</h1>
+      <div class="tagline">Math puzzles that go BOOM! 🎉</div>
+    </div>
+    <div class="welcome-card">
+      <h2>How to Play 🎮</h2>
+      <p>A target number appears on screen. Use the given digits and math operators to build an equation that equals the target — before time explodes! 💥</p>
+      <div class="how-grid">
+        <div class="how-item"><div class="hi-icon">🎯</div><div class="hi-title">Target</div><div class="hi-desc">Match it with your equation</div></div>
+        <div class="how-item"><div class="hi-icon">🔢</div><div class="hi-title">Digits</div><div class="hi-desc">Combine them freely with operators</div></div>
+        <div class="how-item"><div class="hi-icon">⏱️</div><div class="hi-title">Beat Clock</div><div class="hi-desc">Faster solve = more points!</div></div>
+        <div class="how-item"><div class="hi-icon">🏆</div><div class="hi-title">4 Levels</div><div class="hi-desc">Easy → Medium → Hard → Expert</div></div>
+      </div>
+      <input class="name-input" id="player-name" placeholder="✏️ Enter your name..." maxlength="20"/>
+      <button class="btn-start" onclick="startGame()">🚀 Start Game!</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ GAME ═══════════════ -->
+  <div id="screen-game" class="screen">
+    <div class="game-title" style="margin-bottom:12px;">
+      <h1 style="font-size:22px;">💣 Boom Equation 💡</h1>
+    </div>
+
+    <div class="top-row">
+      <span id="level-badge" class="level-badge lv-easy">🟢 Easy</span>
+      <div class="dots">
+        <div class="dot current" id="dot-0"></div>
+        <div class="dot" id="dot-1"></div>
+        <div class="dot" id="dot-2"></div>
+        <div class="dot" id="dot-3"></div>
+      </div>
+    </div>
+
+    <!-- Target + Timer -->
+    <div class="card target-card">
+      <div class="card-label">🎯 Target Number</div>
+      <div class="target-top">
+        <div class="target-bomb">💣</div>
+        <div class="target-number" id="target-display">12</div>
+      </div>
+      <div class="target-timer">
+        <span class="timer-label">⏱ Time</span>
+        <span class="timer-num" id="timer-val">45</span>
+        <span class="timer-label">sec</span>
+        <div class="timer-bar-bg">
+          <div class="timer-bar-fill" id="timer-fill" style="width:100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Digits -->
+    <div class="card digits-card">
+      <div class="card-label">🔢 Your Digits</div>
+      <div class="digits-row" id="digits-display"></div>
+    </div>
+
+    <!-- Equation -->
+    <div class="card equation-card">
+      <div class="card-label">✏️ Your Equation</div>
+      <div class="equation-wrap placeholder" id="equation-display">
+        <span>Tap numbers below to build your equation...</span>
+        <span class="eq-emoji" id="eq-emoji"></span>
+      </div>
+    </div>
+    <div class="toast" id="toast-msg"></div>
+
+    <!-- Keypad -->
+    <div class="card keypad-card">
+      <div class="keypad-grid">
+        <button class="key-btn key-num" onclick="addChar('7')">7</button>
+        <button class="key-btn key-num" onclick="addChar('8')">8</button>
+        <button class="key-btn key-num" onclick="addChar('9')">9</button>
+        <button class="key-btn key-op"  onclick="addChar('/')">÷</button>
+        <button class="key-btn key-num" onclick="addChar('4')">4</button>
+        <button class="key-btn key-num" onclick="addChar('5')">5</button>
+        <button class="key-btn key-num" onclick="addChar('6')">6</button>
+        <button class="key-btn key-op"  onclick="addChar('*')">×</button>
+        <button class="key-btn key-num" onclick="addChar('1')">1</button>
+        <button class="key-btn key-num" onclick="addChar('2')">2</button>
+        <button class="key-btn key-num" onclick="addChar('3')">3</button>
+        <button class="key-btn key-op"  onclick="addChar('-')">−</button>
+        <button class="key-btn key-num key-zero" onclick="addChar('0')">0</button>
+        <button class="key-btn key-op"  onclick="addChar('+')">+</button>
+        <button class="key-btn key-op"  onclick="addChar('(')" style="font-size:15px;letter-spacing:-1px;">( )</button>
+      </div>
+    </div>
+
+    <button class="btn-clear" onclick="clearEq()">🗑️ CLEAR ALL</button>
+
+    <div class="actions-row">
+      <button class="btn-submit" onclick="solve()">Submit ✅</button>
+      <button class="btn-undo"   onclick="undoLast()">Undo ↩️</button>
+    </div>
+
+    <div class="footer-bar">
+      <div class="score-card">
+        <div>
+          <div class="fi-label">Score ⭐</div>
+          <div class="fi-value" id="score-val">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ RESULT ═══════════════ -->
+  <div id="screen-result" class="screen">
+    <div class="game-title" style="margin-bottom:14px;">
+      <h1 style="font-size:22px;">💣 Boom Equation 💡</h1>
+    </div>
+    <div class="result-card">
+      <div class="result-emoji-big" id="result-emoji">🎉</div>
+      <div class="result-title" id="result-title">All Bombs Defused!</div>
+      <div class="result-sub"   id="result-sub">Amazing work!</div>
+      <div class="score-pill"   id="result-score">⭐ 0 pts</div>
+    </div>
+    <div class="lb-card">
+      <div class="card-label" style="margin-bottom:8px;">🏆 Top 3 Leaderboard</div>
+      <div id="lb-list"></div>
+    </div>
+    <button class="btn-play-again" onclick="playAgain()">🔄 Play Again!</button>
+  </div>
+
+</div>
+
+<script>
+const LEVELS=[
+  {name:'Easy',  emoji:'🟢',cls:'lv-easy',  digitCount:3,timeLimit:45},
+  {name:'Medium',emoji:'🟡',cls:'lv-medium',digitCount:4,timeLimit:30},
+  {name:'Hard',  emoji:'🟠',cls:'lv-hard',  digitCount:5,timeLimit:20},
+  {name:'Expert',emoji:'🔴',cls:'lv-expert',digitCount:6,timeLimit:15},
+];
+
+let S={name:'',level:0,score:0,target:0,digits:[],equation:[],timeLeft:0,timerInterval:null,gameActive:false,leaderboard:[]};
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+
+function startGame(){
+  S.name=$('player-name').value.trim()||'Player';
+  S.level=0;S.score=0;
+  try{S.leaderboard=JSON.parse(localStorage.getItem('beq_lb')||'[]');}catch(e){S.leaderboard=[];}
+  loadLevel();showScreen('screen-game');
+}
+
+function loadLevel(){
+  clearInterval(S.timerInterval);
+  const lv=LEVELS[S.level];
+  S.target=rand(1,20);
+  S.digits=Array.from({length:lv.digitCount},()=>rand(1,9));
+  S.equation=[];S.timeLeft=lv.timeLimit;S.gameActive=true;
+
+  const badge=$('level-badge');
+  badge.textContent=lv.emoji+' '+lv.name;
+  badge.className='level-badge '+lv.cls;
+
+  for(let i=0;i<4;i++){
+    $('dot-'+i).className='dot'+(i<S.level?' done':i===S.level?' current':'');
+  }
+  $('target-display').textContent=S.target;
+  $('score-val').textContent=S.score;
+
+  const dd=$('digits-display');dd.innerHTML='';
+  S.digits.forEach(d=>{
+    const c=document.createElement('div');
+    c.className='digit-chip';c.textContent=d;dd.appendChild(c);
+  });
+
+  setEqDisplay();setToast('');updateTimer();
+
+  S.timerInterval=setInterval(()=>{
+    S.timeLeft--;updateTimer();
+    if(S.timeLeft<=0){clearInterval(S.timerInterval);S.gameActive=false;endGame(false);}
+  },1000);
+}
+
+function updateTimer(){
+  const lv=LEVELS[S.level];
+  const pct=(S.timeLeft/lv.timeLimit)*100;
+  const fill=$('timer-fill'),val=$('timer-val');
+  fill.style.width=pct+'%';
+  const dangerClass=pct<=25?'danger':pct<=50?'warn':'';
+  fill.className='timer-bar-fill'+(dangerClass?' '+dangerClass:'');
+  val.textContent=S.timeLeft;
+  val.className='timer-num'+(dangerClass?' '+dangerClass:'');
+}
+
+function setEqDisplay(){
+  const el=$('equation-display'),eq=S.equation;
+  const emoji=$('eq-emoji');
+  if(!eq.length){
+    el.innerHTML='<span>Tap numbers below to build your equation...</span><span class="eq-emoji" id="eq-emoji"></span>';
+    el.className='equation-wrap placeholder';
+  } else {
+    const txt=eq.join('').replace(/\*/g,'×').replace(/\//g,'÷');
+    el.innerHTML='<span>'+txt+'</span><span class="eq-emoji" id="eq-emoji">✏️</span>';
+    el.className='equation-wrap active';
+  }
+}
+
+function addChar(ch){
+  if(!S.gameActive)return;
+  const ops=['+','-','*','/'];
+  if(ch==='('){S.equation.push('(');S.equation.push(')');setEqDisplay();setToast('');return;}
+  if(ops.includes(ch)&&S.equation.length===0){setToast('⚠️ Start with a number!','err');return;}
+  if(ops.includes(ch)&&S.equation.length>0&&ops.includes(S.equation[S.equation.length-1])){setToast('⚠️ Two operators in a row!','err');return;}
+  S.equation.push(ch);setEqDisplay();setToast('');
+}
+
+function undoLast(){
+  if(!S.gameActive)return;
+  if(!S.equation.length){setToast('😅 Nothing to undo!','info');return;}
+  S.equation.pop();setEqDisplay();setToast('↩️ Removed last character','info');
+}
+
+function clearEq(){
+  if(!S.gameActive)return;
+  S.equation=[];setEqDisplay();setToast('🗑️ Equation cleared!','info');
+}
+
+function solve(){
+  if(!S.gameActive)return;
+  const eqStr=S.equation.join('');
+  if(!eqStr){setToast('✏️ Enter an equation first!','err');return;}
+  const ops=['+','-','*','/'];
+  if(ops.includes(eqStr[eqStr.length-1])){setToast('⚠️ Cannot end with operator!','err');return;}
+  let result;
+  try{result=Function('"use strict";return ('+eqStr+')')();}
+  catch(e){setToast('❌ Invalid equation!','err');return;}
+  if(!Number.isFinite(result)){setToast('⚠️ Division by zero!','err');return;}
+  result=Math.round(result*100)/100;
+
+  const el=$('equation-display');
+  if(result===S.target){
+    el.className='equation-wrap correct';
+    el.innerHTML='<span>'+S.equation.join('').replace(/\*/g,'×').replace(/\//g,'÷')+'</span><span class="eq-emoji">✅</span>';
+    const pts=10+S.timeLeft;S.score+=pts;
+    $('score-val').textContent=S.score;
+    setToast('🎉 Correct! +'+pts+' points!','ok');
+    spawnSparkles();
+    clearInterval(S.timerInterval);S.gameActive=false;
+    setTimeout(()=>{S.level++;if(S.level>=LEVELS.length)endGame(true);else loadLevel();},1400);
+  } else {
+    el.className='equation-wrap wrong';
+    el.innerHTML='<span>'+S.equation.join('').replace(/\*/g,'×').replace(/\//g,'÷')+'</span><span class="eq-emoji">❌</span>';
+    setToast('❌ Got '+result+' — need '+S.target+'. Try again!','err');
+    setTimeout(()=>{S.equation=[];setEqDisplay();},600);
+  }
+}
+
+function setToast(msg,cls){const el=$('toast-msg');el.textContent=msg;el.className='toast '+(cls||'');}
+
+function spawnSparkles(){
+  const emojis=['✨','⭐','🌟','💫'];
+  for(let i=0;i<8;i++){
+    setTimeout(()=>{
+      const s=document.createElement('div');
+      s.className='sparkle';
+      s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+      const card=document.querySelector('.target-card');
+      const rect=card.getBoundingClientRect();
+      s.style.left=(rect.left+rand(20,rect.width-20))+'px';
+      s.style.top=(rect.top+rand(10,rect.height-10)+window.scrollY)+'px';
+      s.style.setProperty('--tx',(rand(-60,60))+'px');
+      s.style.setProperty('--ty',(rand(-80,-20))+'px');
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(),800);
+    },i*80);
+  }
+}
+
+function spawnConfetti(){
+  const colors=['#FFD166','#FF8C42','#66bb6a','#80b3ff','#c3b1ff','#FF6B6B','#4fc3f7'];
+  for(let i=0;i<70;i++){
+    setTimeout(()=>{
+      const c=document.createElement('div');
+      c.className='confetti-piece';
+      c.style.left=rand(0,100)+'vw';
+      c.style.top='-15px';
+      c.style.background=colors[rand(0,colors.length-1)];
+      c.style.width=rand(7,13)+'px';
+      c.style.height=rand(7,13)+'px';
+      c.style.borderRadius=rand(0,1)?'50%':'2px';
+      c.style.animationDuration=(rand(18,28)/10)+'s';
+      c.style.animationDelay=(rand(0,12)/10)+'s';
+      document.body.appendChild(c);
+      setTimeout(()=>c.remove(),3200);
+    },i*30);
+  }
+}
+
+function endGame(won){
+  clearInterval(S.timerInterval);
+  S.leaderboard.push({name:S.name,score:S.score});
+  S.leaderboard.sort((a,b)=>b.score-a.score);
+  S.leaderboard=S.leaderboard.slice(0,10);
+  try{localStorage.setItem('beq_lb',JSON.stringify(S.leaderboard));}catch(e){}
+
+  if(won){
+    $('result-emoji').textContent='🎉';
+    $('result-title').textContent='All Bombs Defused!';
+    $('result-title').style.color='#2e7d32';
+    $('result-sub').textContent='Outstanding work, '+S.name+'! You\'re a math genius! 🧠';
+    spawnConfetti();
+  } else {
+    $('result-emoji').textContent='💥';
+    $('result-title').textContent='Boom! It Exploded!';
+    $('result-title').style.color='#c62828';
+    $('result-sub').textContent='Better luck next time, '+S.name+'! Keep practicing! 💪';
+  }
+  $('result-score').textContent='⭐ '+S.score+' pts';
+
+  const lb=$('lb-list');lb.innerHTML='';
+  const medals=['🥇','🥈','🥉'];
+  const top3=S.leaderboard.slice(0,3);
+  if(!top3.length){lb.innerHTML='<div style="color:#b0b5c8;font-size:13px;padding:8px 0;text-align:center;">No scores yet! Be the first! 🚀</div>';}
+  top3.forEach((e,i)=>{
+    lb.innerHTML+=`<div class="lb-row"><div class="lb-left"><span style="font-size:20px">${medals[i]}</span>${e.name}</div><div class="lb-right">${e.score} pts</div></div>`;
+  });
+  showScreen('screen-result');
+}
+
+function playAgain(){showScreen('screen-welcome');}
+$('player-name').addEventListener('keydown',e=>{if(e.key==='Enter')startGame();});
+</script>
+</body>
+</html>
