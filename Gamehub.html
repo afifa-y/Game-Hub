@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>🎮 GAME HUB</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Exo+2:wght@400;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #07080f;
+  --bg2: #0c0e1a;
+  --surface: #111422;
+  --border: #1e2235;
+  --text: #e8eaf6;
+  --muted: #5a6080;
+  --accent: #7c5cfc;
+  --accent2: #fc5c7d;
+}
+
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes titleGlow {
+  0%, 100% { text-shadow: 0 0 20px #7c5cfc80, 0 0 60px #7c5cfc40; }
+  50%       { text-shadow: 0 0 30px #fc5c7d90, 0 0 80px #fc5c7d40; }
+}
+@keyframes cardHover {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-8px) scale(1.02); }
+}
+@keyframes previewPulse {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 1; }
+}
+@keyframes borderRun {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 400% 0%; }
+}
+@keyframes slideIn {
+  from { transform: scale(0.88) translateY(30px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes starField {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+@keyframes tagBlink {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0.4; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+html, body {
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  font-family: 'Exo 2', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Stars Background ─────────────────────────────────── */
+#stars-wrap {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+#stars-wrap::before, #stars-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 200%;
+  background-image:
+    radial-gradient(1px 1px at 10% 5%, #ffffff33 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 12%, #ffffff22 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 8%, #ffffff2a 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 70% 20%, #ffffff1a 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 4%, #ffffff30 0%, transparent 100%),
+    radial-gradient(1px 1px at 20% 35%, #ffffff18 0%, transparent 100%),
+    radial-gradient(1px 1px at 42% 50%, #ffffff20 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 62% 40%, #ffffff15 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 55%, #ffffff22 0%, transparent 100%),
+    radial-gradient(1px 1px at 5% 70%, #ffffff18 0%, transparent 100%),
+    radial-gradient(1px 1px at 33% 80%, #ffffff25 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 65%, #ffffff1a 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 48% 90%, #ffffff20 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 95%, #ffffff15 0%, transparent 100%),
+    radial-gradient(1px 1px at 95% 85%, #ffffff28 0%, transparent 100%);
+  animation: starField 60s linear infinite;
+}
+#stars-wrap::after {
+  animation-duration: 90s;
+  animation-direction: reverse;
+  opacity: 0.5;
+}
+
+/* ── Scanline overlay ─────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.04) 2px,
+    rgba(0,0,0,0.04) 4px
+  );
+}
+
+/* ── Layout ───────────────────────────────────────────── */
+#page {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+header {
+  text-align: center;
+  margin-bottom: 60px;
+  animation: floatUp 0.8s ease both;
+}
+
+.header-badge {
+  display: inline-block;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 4px 14px;
+  border-radius: 2px;
+  margin-bottom: 20px;
+  animation: tagBlink 3s ease infinite;
+}
+
+header h1 {
+  font-family: 'Black Ops One', cursive;
+  font-size: clamp(40px, 10vw, 90px);
+  line-height: 1;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, #fff 0%, #7c5cfc 40%, #fc5c7d 70%, #fff 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titleGlow 3s ease-in-out infinite, borderRun 4s linear infinite;
+}
+
+.header-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 3px;
+  margin-top: 14px;
+}
+
+.game-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 6px 20px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.game-count span {
+  font-family: 'Black Ops One', cursive;
+  font-size: 18px;
+  color: var(--accent2);
+}
+
+/* ── Divider ──────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+  animation: floatUp 0.9s 0.1s ease both;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.divider-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--muted);
+}
+
+/* ── Grid ─────────────────────────────────────────────── */
+#games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* ── Card ─────────────────────────────────────────────── */
+.game-card {
+  position: relative;
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), box-shadow 0.3s ease;
+  animation: floatUp 0.6s ease both;
+  border: 1px solid var(--border);
+}
+.game-card:nth-child(1) { animation-delay: 0.1s; }
+.game-card:nth-child(2) { animation-delay: 0.2s; }
+.game-card:nth-child(3) { animation-delay: 0.3s; }
+.game-card:nth-child(4) { animation-delay: 0.4s; }
+.game-card:nth-child(5) { animation-delay: 0.5s; }
+
+.game-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--card-color, #7c5cfc);
+}
+
+/* Gradient accent top bar */
+.card-bar {
+  height: 3px;
+  background: var(--card-gradient);
+  position: relative;
+}
+.card-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(8px);
+  opacity: 0.8;
+}
+
+/* Preview area */
+.card-preview {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg, #0c0e1a);
+}
+.card-preview-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--card-gradient);
+  opacity: 0.06;
+}
+.card-emoji {
+  font-size: 72px;
+  animation: previewPulse 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px var(--card-color, #7c5cfc));
+  z-index: 1;
+  user-select: none;
+}
+.card-preview-particles {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, var(--card-color, #7c5cfc) 0%, transparent 100%),
+    radial-gradient(2px 2px at 80% 20%, var(--card-color, #7c5cfc) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 70%, var(--card-color, #7c5cfc) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 70% 80%, var(--card-color, #7c5cfc) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 80%, var(--card-color, #7c5cfc) 0%, transparent 100%);
+  opacity: 0.4;
+}
+
+/* Card body */
+.card-body {
+  padding: 20px 22px 22px;
+}
+.card-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--card-color, #7c5cfc);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-tag::before {
+  content: '';
+  width: 16px;
+  height: 1px;
+  background: var(--card-color, #7c5cfc);
+}
+.card-title {
+  font-family: 'Black Ops One', cursive;
+  font-size: 22px;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  color: #fff;
+}
+.card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-pills {
+  display: flex;
+  gap: 6px;
+}
+.pill {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 3px 10px;
+  border-radius: 2px;
+  border: 1px solid;
+  color: var(--card-color, #7c5cfc);
+  border-color: var(--card-color, #7c5cfc);
+  opacity: 0.7;
+}
+.card-play-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-gradient);
+  color: #fff;
+  font-family: 'Exo 2', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+.card-play-btn:hover { filter: brightness(1.2); transform: scale(1.04); }
+.card-play-btn svg { width: 14px; height: 14px; }
+
+/* ── Modal Overlay ────────────────────────────────────── */
+#modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(5,6,15,0.96);
+  backdrop-filter: blur(12px);
+  animation: overlayIn 0.25s ease;
+  flex-direction: column;
+}
+#modal-overlay.active {
+  display: flex;
+}
+
+#modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+#modal-game-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#modal-emoji { font-size: 26px; }
+#modal-name {
+  font-family: 'Black Ops One', cursive;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--modal-color, #7c5cfc);
+}
+#modal-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+#modal-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.modal-btn:hover { border-color: var(--muted); color: var(--text); }
+#close-btn {
+  border-color: #fc5c7d44;
+  color: #fc5c7d;
+  background: #fc5c7d11;
+}
+#close-btn:hover { background: #fc5c7d22; border-color: #fc5c7d; }
+
+#modal-frame-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  animation: slideIn 0.3s 0.1s ease both;
+}
+#modal-frame-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--modal-gradient, linear-gradient(90deg, #7c5cfc, #fc5c7d));
+  z-index: 10;
+}
+#game-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── Footer ───────────────────────────────────────────── */
+footer {
+  margin-top: 70px;
+  text-align: center;
+  animation: floatUp 1s 0.6s ease both;
+}
+.footer-line {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.footer-line::before, .footer-line::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.footer-dot {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent);
+}
+footer p {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 3px;
+}
+
+/* Fullscreen btn */
+#fullscreen-btn {
+  display: none;
+}
+@media (min-width: 600px) {
+  #fullscreen-btn { display: flex; }
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  #page { padding: 24px 14px 60px; }
+  header { margin-bottom: 40px; }
+  #games-grid { grid-template-columns: 1fr; gap: 16px; }
+}
+</style>
+</head>
+<body>
+<div id="stars-wrap"></div>
+
+<div id="page">
+  <!-- Header -->
+  <header>
+    <div class="header-badge">// ARCADE COLLECTION</div>
+    <h1>GAME HUB</h1>
+    <div class="header-sub">SELECT A GAME TO BEGIN</div>
+    <div class="game-count">
+      <span>5</span> GAMES LOADED &amp; READY TO PLAY
+    </div>
+  </header>
+
+  <div class="divider"><div class="divider-label">AVAILABLE GAMES</div></div>
+
+  <!-- Grid -->
+  <div id="games-grid">
+
+    <!-- Snake -->
+    <div class="game-card" style="--card-color:#00ff88;--card-gradient:linear-gradient(135deg,#00ff88,#00cc55);--card-bg:#050f0a" onclick="openGame('SnakeGame.html','SNAKE GAME','🐍','#00ff88','linear-gradient(135deg,#00ff88,#00cc55)')">
+      <div class="card-bar" style="background:linear-gradient(90deg,#00ff88,#00cc55)"></div>
+      <div class="card-preview">
+        <div class="card-preview-bg"></div>
+        <div class="card-preview-particles"></div>
+        <div class="card-emoji">🐍</div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">ARCADE</div>
+        <div class="card-title">SNAKE GAME</div>
+        <div class="card-desc">Classic snake — eat food, grow longer, don't hit yourself. Built with a queue data structure for buttery smooth movement.</div>
+        <div class="card-footer">
+          <div class="card-pills">
+            <div class="pill">CLASSIC</div>
+            <div class="pill">D-PAD</div>
+          </div>
+          <button class="card-play-btn" style="background:linear-gradient(135deg,#00ff88,#00cc55);color:#000">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            PLAY
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sudoku -->
+    <div class="game-card" style="--card-color:#38b6ff;--card-gradient:linear-gradient(135deg,#38b6ff,#1e6fa8);--card-bg:#050a0f" onclick="openGame('sudoku-standalone.html','SUDOKU','🧩','#38b6ff','linear-gradient(135deg,#38b6ff,#1e6fa8)')">
+      <div class="card-bar" style="background:linear-gradient(90deg,#38b6ff,#1e6fa8)"></div>
+      <div class="card-preview">
+        <div class="card-preview-bg"></div>
+        <div class="card-preview-particles"></div>
+        <div class="card-emoji">🧩</div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">PUZZLE</div>
+        <div class="card-title">SUDOKU</div>
+        <div class="card-desc">Fill the 9×9 grid so every row, column and box contains all digits 1–9. Soothing and endlessly satisfying.</div>
+        <div class="card-footer">
+          <div class="card-pills">
+            <div class="pill">PUZZLE</div>
+            <div class="pill">LOGIC</div>
+          </div>
+          <button class="card-play-btn" style="background:linear-gradient(135deg,#38b6ff,#1e6fa8)">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            PLAY
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brain Duel -->
+    <div class="game-card" style="--card-color:#fc5c7d;--card-gradient:linear-gradient(135deg,#fc5c7d,#6a3de8);--card-bg:#0d050a" onclick="openGame('BrainDuel.html','BRAIN DUEL','🧠','#fc5c7d','linear-gradient(135deg,#fc5c7d,#6a3de8)')">
+      <div class="card-bar" style="background:linear-gradient(90deg,#fc5c7d,#6a3de8)"></div>
+      <div class="card-preview">
+        <div class="card-preview-bg"></div>
+        <div class="card-preview-particles"></div>
+        <div class="card-emoji">🧠</div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">MULTIPLAYER</div>
+        <div class="card-title">BRAIN DUEL</div>
+        <div class="card-desc">Challenge your mind against AI in fast-paced trivia combat. Answer faster and smarter to defeat your opponent.</div>
+        <div class="card-footer">
+          <div class="card-pills">
+            <div class="pill">VS AI</div>
+            <div class="pill">TRIVIA</div>
+          </div>
+          <button class="card-play-btn" style="background:linear-gradient(135deg,#fc5c7d,#6a3de8)">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            PLAY
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Boom Equation -->
+    <div class="game-card" style="--card-color:#ffd166;--card-gradient:linear-gradient(135deg,#ffd166,#ff8c42);--card-bg:#0f0c05" onclick="openGame('BoomEquation.html','BOOM EQUATION','💣','#ffd166','linear-gradient(135deg,#ffd166,#ff8c42)')">
+      <div class="card-bar" style="background:linear-gradient(90deg,#ffd166,#ff8c42)"></div>
+      <div class="card-preview">
+        <div class="card-preview-bg"></div>
+        <div class="card-preview-particles"></div>
+        <div class="card-emoji">💣</div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">MATH</div>
+        <div class="card-title">BOOM EQUATION</div>
+        <div class="card-desc">Solve math equations before time runs out — or it explodes! Arithmetic under pressure in a colorful blast.</div>
+        <div class="card-footer">
+          <div class="card-pills">
+            <div class="pill">MATH</div>
+            <div class="pill">TIMED</div>
+          </div>
+          <button class="card-play-btn" style="background:linear-gradient(135deg,#ffd166,#ff8c42);color:#000">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            PLAY
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stack Escape -->
+    <div class="game-card" style="--card-color:#e8529a;--card-gradient:linear-gradient(135deg,#e8529a,#9060e0);--card-bg:#0d050e" onclick="openGame('StackEscapeGame_Bright.html','STACK ESCAPE','🃏','#e8529a','linear-gradient(135deg,#e8529a,#9060e0)')">
+      <div class="card-bar" style="background:linear-gradient(90deg,#e8529a,#9060e0)"></div>
+      <div class="card-preview">
+        <div class="card-preview-bg"></div>
+        <div class="card-preview-particles"></div>
+        <div class="card-emoji">🃏</div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">STRATEGY</div>
+        <div class="card-title">STACK ESCAPE</div>
+        <div class="card-desc">Master the stack — push and pop your way through increasingly tricky puzzles with beautiful pastel visuals.</div>
+        <div class="card-footer">
+          <div class="card-pills">
+            <div class="pill">STACK</div>
+            <div class="pill">PUZZLE</div>
+          </div>
+          <button class="card-play-btn" style="background:linear-gradient(135deg,#e8529a,#9060e0)">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            PLAY
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="footer-line"><div class="footer-dot"></div></div>
+    <p>GAME HUB &nbsp;·&nbsp; 5 TITLES &nbsp;·&nbsp; ALL GAMES PLAYABLE IN BROWSER</p>
+  </footer>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal-header">
+    <div id="modal-game-info">
+      <div id="modal-emoji">🐍</div>
+      <div>
+        <div id="modal-name">SNAKE GAME</div>
+        <div id="modal-tag">ARCADE GAME</div>
+      </div>
+    </div>
+    <div id="modal-controls">
+      <button class="modal-btn" id="fullscreen-btn" onclick="toggleFullscreen()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+        </svg>
+        FULLSCREEN
+      </button>
+      <button class="modal-btn" id="close-btn" onclick="closeGame()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        EXIT
+      </button>
+    </div>
+  </div>
+  <div id="modal-frame-wrap">
+    <iframe id="game-frame" src="" title="Game"></iframe>
+  </div>
+</div>
+
+<script>
+  function openGame(file, name, emoji, color, gradient) {
+    const overlay = document.getElementById('modal-overlay');
+    const frame   = document.getElementById('game-frame');
+    document.getElementById('modal-name').textContent  = name;
+    document.getElementById('modal-emoji').textContent = emoji;
+    document.getElementById('modal-name').style.color  = color;
+    overlay.style.setProperty('--modal-color', color);
+    overlay.style.setProperty('--modal-gradient', gradient);
+    document.getElementById('modal-frame-wrap').style.setProperty('--modal-gradient', gradient);
+    frame.src = file;
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeGame() {
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.remove('active');
+    document.getElementById('game-frame').src = '';
+    document.body.style.overflow = '';
+    if (document.fullscreenElement) document.exitFullscreen();
+  }
+
+  function toggleFullscreen() {
+    const wrap = document.getElementById('modal-frame-wrap');
+    if (!document.fullscreenElement) {
+      wrap.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeGame();
+  });
+</script>
+</body>
+</html>
