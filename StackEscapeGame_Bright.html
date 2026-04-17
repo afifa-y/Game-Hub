@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StackEscapeGame</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#fff5fb;--surface:#fff0f8;--surface2:#ffe8f4;--border:#f9c6e0;
+    --text:#4a2040;--muted:#b07090;
+
+    /* Easy = Light Pink */
+    --easy-bg:#fff0f5;--easy-accent:#e8529a;--easy-glow:#f9c6e050;--easy-border:#f4a0c8;
+
+    /* Medium = Light Blue */
+    --med-bg:#f0f6ff;--med-accent:#4d8fe0;--med-glow:#aacff850;--med-border:#90c0f0;
+
+    /* Hard = Light Purple */
+    --hard-bg:#f5f0ff;--hard-accent:#9060e0;--hard-glow:#c8a8f850;--hard-border:#c0a0f0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:linear-gradient(135deg,#fff0fb 0%,#f0f6ff 50%,#f5f0ff 100%);
+    color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;
+    display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem 3rem;
+  }
+  body::before{
+    content:'';position:fixed;inset:0;
+    background-image:radial-gradient(circle,#f9c6e0 1px,transparent 1px);
+    background-size:28px 28px;opacity:0.45;pointer-events:none;z-index:0;
+  }
+  #app{position:relative;z-index:1;width:100%;max-width:540px;}
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  /* HEADER */
+  .site-header{text-align:center;margin-bottom:2.5rem;}
+  .site-logo{font-size:13px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:4px;text-transform:uppercase;margin-bottom:8px;}
+  .site-title{
+    font-size:42px;font-weight:800;letter-spacing:-1px;line-height:1;
+    background:linear-gradient(135deg,#e8529a 0%,#4d8fe0 50%,#9060e0 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .site-tagline{font-size:13px;color:var(--muted);margin-top:8px;font-family:'DM Mono',monospace;letter-spacing:1px;}
+
+  /* SCREEN 1 */
+  .select-label{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+  .level-cards{display:flex;flex-direction:column;gap:14px;}
+  .level-card{border-radius:16px;cursor:pointer;border:1px solid var(--border);overflow:hidden;transition:transform .18s,box-shadow .18s;}
+  .level-card:hover{transform:translateY(-4px);}
+  .level-card:active{transform:scale(.985);}
+  .level-card.easy{border-color:var(--easy-border);background:var(--easy-bg);}
+  .level-card.easy:hover{box-shadow:0 8px 32px var(--easy-glow);}
+  .level-card.medium{border-color:var(--med-border);background:var(--med-bg);}
+  .level-card.medium:hover{box-shadow:0 8px 32px var(--med-glow);}
+  .level-card.hard{border-color:var(--hard-border);background:var(--hard-bg);}
+  .level-card.hard:hover{box-shadow:0 8px 32px var(--hard-glow);}
+  .card-inner{display:flex;align-items:center;}
+  .card-accent-bar{width:4px;align-self:stretch;flex-shrink:0;}
+  .easy .card-accent-bar{background:var(--easy-accent);}
+  .medium .card-accent-bar{background:var(--med-accent);}
+  .hard .card-accent-bar{background:var(--hard-accent);}
+  .card-icon-wrap{width:72px;height:80px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:30px;}
+  .card-body{flex:1;padding:18px 16px 18px 0;}
+  .card-row1{display:flex;align-items:center;gap:10px;margin-bottom:5px;}
+  .card-name{font-size:18px;font-weight:700;letter-spacing:-.3px;}
+  .easy .card-name{color:var(--easy-accent);}
+  .medium .card-name{color:var(--med-accent);}
+  .hard .card-name{color:var(--hard-accent);}
+  .card-tag{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:1px;padding:3px 8px;border-radius:4px;font-weight:500;}
+  .easy .card-tag{background:var(--easy-glow);color:var(--easy-accent);}
+  .medium .card-tag{background:var(--med-glow);color:var(--med-accent);}
+  .hard .card-tag{background:var(--hard-glow);color:var(--hard-accent);}
+  .card-desc{font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+  .card-meta{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1px;}
+  .card-arrow{font-size:20px;color:var(--muted);padding-right:18px;opacity:.5;transition:opacity .2s,transform .2s;}
+  .level-card:hover .card-arrow{opacity:1;transform:translateX(4px);}
+
+  /* SCREEN 2 */
+  .game-topbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;}
+  .back-btn{
+    background:#fff;color:var(--muted);border:1px solid var(--border);
+    padding:8px 14px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;
+    cursor:pointer;letter-spacing:1px;transition:background .15s,color .15s;
+  }
+  .back-btn:hover{background:var(--surface2);color:var(--text);}
+  .game-lv-name{font-size:18px;font-weight:700;flex:1;}
+  .game-lv-name.easy{color:var(--easy-accent);}
+  .game-lv-name.medium{color:var(--med-accent);}
+  .game-lv-name.hard{color:var(--hard-accent);}
+  .move-counter{font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);}
+
+  #msg-box{border-radius:10px;padding:10px 16px;font-size:13px;font-family:'DM Mono',monospace;letter-spacing:.5px;margin-bottom:14px;display:none;border:1px solid transparent;}
+  #msg-box.show{display:block;}
+  /* warn = light orange */
+  #msg-box.warn{background:#fff4e0;color:#c07800;border-color:#ffd080;}
+  /* err = light red/pink */
+  #msg-box.err{background:#fff0f3;color:#d04060;border-color:#f4a8b8;}
+
+  .maze-wrap{margin-bottom:1.25rem;}
+  .maze-grid{display:grid;gap:5px;}
+  .cell{border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;transition:background .12s;user-select:none;}
+  /* wall = light grey-lavender */
+  .cell-wall{background:#e8e4f0;border:1px solid #d8d0e8;}
+  /* path = white with soft border */
+  .cell-path{background:#ffffff;border:1px solid #f0d8ec;}
+  /* trail = light yellow */
+  .cell-trail{background:#fffce0;border:1px solid #f0e880;}
+  /* player = light surface */
+  .cell-player{background:#fff8fc;border:1px solid var(--border);}
+  .cell-exit{border:1px solid transparent;}
+  .cell-exit.easy{background:var(--easy-glow);border-color:var(--easy-border);}
+  .cell-exit.medium{background:var(--med-glow);border-color:var(--med-border);}
+  .cell-exit.hard{background:var(--hard-glow);border-color:var(--hard-border);}
+  .player-icon{width:60%;height:60%;display:block;}
+
+  /* Controls */
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem;}
+  /* undo = light orange */
+  .ctrl-btn{
+    padding:11px 0;border-radius:10px;font-size:13px;font-family:'DM Mono',monospace;
+    font-weight:500;letter-spacing:1px;cursor:pointer;border:1px solid;
+    transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .ctrl-btn:active{transform:scale(.97);}
+  .ctrl-btn.undo{background:#fff4e0;color:#c07800;border-color:#ffd080;}
+  .ctrl-btn.undo:hover{background:#ffead0;}
+  /* restart = light green */
+  .ctrl-btn.restart{background:#f0fff4;color:#3a9a60;border-color:#90daa8;}
+  .ctrl-btn.restart:hover{background:#e0ffe8;}
+
+  /* D-Pad */
+  .dpad-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:1.5rem;}
+  .dpad-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;}
+  .dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:5px;}
+  .dpad-btn{
+    background:#fff;border:1px solid var(--border);border-radius:10px;
+    color:var(--text);font-size:16px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .12s,transform .1s;user-select:none;
+  }
+  .dpad-btn:hover{background:var(--surface2);}
+  .dpad-btn:active{transform:scale(.92);background:var(--surface2);}
+  .dpad-center{background:var(--surface);border-color:var(--border);cursor:default;}
+  .dpad-center:hover{background:var(--surface);}
+
+  /* Keyboard hint */
+  .kbd-hint{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1px;margin-bottom:1.25rem;text-align:center;}
+  kbd{
+    display:inline-block;background:#fff;border:1px solid var(--border);
+    border-radius:4px;padding:1px 6px;font-family:'DM Mono',monospace;
+    font-size:11px;color:var(--text);margin:0 2px;
+  }
+
+  /* Legend */
+  .legend{display:flex;gap:14px;flex-wrap:wrap;padding-top:1rem;border-top:1px solid var(--border);}
+  .li{display:flex;align-items:center;gap:6px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:.5px;}
+  .ls{width:14px;height:14px;border-radius:4px;}
+  .ls-wall{background:#e8e4f0;border:1px solid #d8d0e8;}
+  .ls-path{background:#ffffff;border:1px solid #f0d8ec;}
+  .ls-trail{background:#fffce0;border:1px solid #f0e880;}
+
+  /* SCREEN 3 */
+  #screen-result.active{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72vh;animation:fadeUp .45s cubic-bezier(.22,1,.36,1);}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+  .result-card{width:100%;border-radius:24px;padding:3rem 2rem;border:1px solid transparent;text-align:center;position:relative;overflow:hidden;}
+  .result-card::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,#ffffff 1px,transparent 1px);background-size:22px 22px;opacity:.5;pointer-events:none;}
+
+  /* Win = light green */
+  .result-card.win-card{
+    background:linear-gradient(160deg,#f0fff6 0%,#e0ffe8 55%,#f0fff6 100%);
+    border-color:#90daa8;box-shadow:0 0 80px #b8f0c840,inset 0 1px 0 #c0f0d050;
+  }
+  /* Loss = light pink/red */
+  .result-card.loss-card{
+    background:linear-gradient(160deg,#fff0f3 0%,#ffe0e8 55%,#fff0f3 100%);
+    border-color:#f4a8b8;box-shadow:0 0 80px #f8c0cc40,inset 0 1px 0 #f8c0cc50;
+  }
+
+  .result-icon-ring{width:108px;height:108px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.75rem;font-size:52px;position:relative;z-index:1;}
+  .win-card .result-icon-ring{background:#d8fff0;border:2px solid #90daa8;box-shadow:0 0 36px #b0f0c840;}
+  .loss-card .result-icon-ring{background:#ffe0e8;border:2px solid #f4a8b8;box-shadow:0 0 36px #f8c0cc40;}
+
+  .result-label{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;position:relative;z-index:1;}
+  .win-card .result-label{color:#3a9a6090;}
+  .loss-card .result-label{color:#d0406090;}
+
+  .result-headline{font-size:64px;font-weight:800;letter-spacing:-3px;line-height:1;margin-bottom:1.5rem;position:relative;z-index:1;}
+  .win-card .result-headline{color:#3a9a60;text-shadow:0 0 50px #a0e0c050;}
+  .loss-card .result-headline{color:#d04060;text-shadow:0 0 50px #f0a0b850;}
+
+  .result-divider{height:1px;width:80px;margin:0 auto 1.5rem;position:relative;z-index:1;}
+  .win-card .result-divider{background:linear-gradient(90deg,transparent,#90daa8,transparent);}
+  .loss-card .result-divider{background:linear-gradient(90deg,transparent,#f4a8b8,transparent);}
+
+  .result-stats{display:flex;gap:10px;justify-content:center;margin-bottom:.75rem;position:relative;z-index:1;flex-wrap:wrap;}
+  .stat-pill{padding:7px 18px;border-radius:999px;font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1px;border:1px solid;}
+  .win-card .stat-pill{background:#d8fff0;color:#3a9a60;border-color:#90daa8;}
+  .loss-card .stat-pill{background:#ffe0e8;color:#d04060;border-color:#f4a8b8;}
+
+  .result-detail{font-size:13px;font-family:'DM Mono',monospace;letter-spacing:1px;margin-bottom:2.5rem;position:relative;z-index:1;}
+  .win-card .result-detail{color:#3a9a6090;}
+  .loss-card .result-detail{color:#d0406090;}
+
+  .result-actions{display:flex;flex-direction:column;gap:12px;position:relative;z-index:1;}
+  .res-btn{width:100%;padding:15px 0;border-radius:12px;font-size:13px;font-family:'DM Mono',monospace;font-weight:500;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:1px solid;transition:transform .12s,background .15s;}
+  .res-btn:active{transform:scale(.97);}
+  .win-card .res-btn-primary{background:#d8fff0;color:#3a9a60;border-color:#90daa8;}
+  .win-card .res-btn-primary:hover{background:#c0ffe0;}
+  .loss-card .res-btn-primary{background:#ffe0e8;color:#d04060;border-color:#f4a8b8;}
+  .loss-card .res-btn-primary:hover{background:#ffd0dc;}
+  .res-btn-secondary{background:#fff;color:var(--muted);border-color:var(--border);}
+  .res-btn-secondary:hover{background:var(--surface2);color:var(--text);}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="site-header">
+    <div class="site-logo">◈ puzzle game</div>
+    <div class="site-title">STACK ESCAPE</div>
+    <div class="site-tagline">navigate · backtrack · escape</div>
+  </header>
+
+  <!-- SCREEN 1: SELECT -->
+  <div id="screen-select" class="screen active">
+    <div class="select-label">// choose difficulty</div>
+    <div class="level-cards">
+      <div class="level-card easy" onclick="startLevel(1)">
+        <div class="card-inner">
+          <div class="card-accent-bar"></div>
+          <div class="card-icon-wrap">🔓</div>
+          <div class="card-body">
+            <div class="card-row1"><span class="card-name">Easy</span><span class="card-tag">BEGINNER</span></div>
+            <div class="card-desc">A small open grid — find your footing and learn the ropes.</div>
+            <div class="card-meta">5 × 5 grid · simple paths</div>
+          </div>
+          <div class="card-arrow">→</div>
+        </div>
+      </div>
+      <div class="level-card medium" onclick="startLevel(2)">
+        <div class="card-inner">
+          <div class="card-accent-bar"></div>
+          <div class="card-icon-wrap">🧩</div>
+          <div class="card-body">
+            <div class="card-row1"><span class="card-name">Medium</span><span class="card-tag">EXPLORER</span></div>
+            <div class="card-desc">A winding corridor maze. Think before you move.</div>
+            <div class="card-meta">7 × 7 grid · winding route</div>
+          </div>
+          <div class="card-arrow">→</div>
+        </div>
+      </div>
+      <div class="level-card hard" onclick="startLevel(3)">
+        <div class="card-inner">
+          <div class="card-accent-bar"></div>
+          <div class="card-icon-wrap">🔮</div>
+          <div class="card-body">
+            <div class="card-row1"><span class="card-name">Hard</span><span class="card-tag">MASTER</span></div>
+            <div class="card-desc">A deep labyrinth. Every wrong turn costs. Use your undo stack.</div>
+            <div class="card-meta">9 × 9 grid · complex maze</div>
+          </div>
+          <div class="card-arrow">→</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: GAME -->
+  <div id="screen-game" class="screen">
+    <div class="game-topbar">
+      <button class="back-btn" onclick="goBack()">← levels</button>
+      <span class="game-lv-name" id="game-lv-name"></span>
+      <span class="move-counter" id="move-counter">00 moves</span>
+    </div>
+    <div id="msg-box"></div>
+    <div class="maze-wrap"><div class="maze-grid" id="maze-grid"></div></div>
+    <div class="controls">
+      <button class="ctrl-btn undo" onclick="undoMove()">↩ UNDO (U)</button>
+      <button class="ctrl-btn restart" onclick="restartLevel()">↺ RESTART</button>
+    </div>
+    <div class="dpad-wrap">
+      <div class="dpad-label">// touch controls</div>
+      <div class="dpad">
+        <div></div><button class="dpad-btn" onclick="move(-1,0)">▲</button><div></div>
+        <button class="dpad-btn" onclick="move(0,-1)">◀</button>
+        <div class="dpad-btn dpad-center">◈</div>
+        <button class="dpad-btn" onclick="move(0,1)">▶</button>
+        <div></div><button class="dpad-btn" onclick="move(1,0)">▼</button><div></div>
+      </div>
+    </div>
+    <div class="kbd-hint">keyboard: <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows · <kbd>U</kbd> to undo</div>
+    <div class="legend">
+      <div class="li"><div class="ls" style="background:#e0ffe8;border:1px solid #90daa8"></div>exit</div>
+      <div class="li"><div class="ls ls-path"></div>path</div>
+      <div class="li"><div class="ls ls-wall"></div>wall</div>
+      <div class="li"><div class="ls ls-trail"></div>trail</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: RESULT -->
+  <div id="screen-result" class="screen">
+    <div class="result-card" id="result-card">
+      <div class="result-icon-ring" id="result-icon"></div>
+      <div class="result-label" id="result-label"></div>
+      <div class="result-headline" id="result-headline"></div>
+      <div class="result-divider"></div>
+      <div class="result-stats" id="result-stats"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <div class="result-actions">
+        <button class="res-btn res-btn-primary" onclick="restartLevel()">↺ PLAY AGAIN</button>
+        <button class="res-btn res-btn-secondary" onclick="goBack()">← BACK TO LEVELS</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+const PLAYER_SVG={
+  easy:`<svg class="player-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="10" stroke="#e8529a" stroke-width="2"/><circle cx="16" cy="16" r="3" fill="#e8529a"/><line x1="16" y1="4" x2="16" y2="10" stroke="#e8529a" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="22" x2="16" y2="28" stroke="#e8529a" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="16" x2="10" y2="16" stroke="#e8529a" stroke-width="2" stroke-linecap="round"/><line x1="22" y1="16" x2="28" y2="16" stroke="#e8529a" stroke-width="2" stroke-linecap="round"/></svg>`,
+  medium:`<svg class="player-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="10" stroke="#4d8fe0" stroke-width="2"/><circle cx="16" cy="16" r="3" fill="#4d8fe0"/><line x1="16" y1="4" x2="16" y2="10" stroke="#4d8fe0" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="22" x2="16" y2="28" stroke="#4d8fe0" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="16" x2="10" y2="16" stroke="#4d8fe0" stroke-width="2" stroke-linecap="round"/><line x1="22" y1="16" x2="28" y2="16" stroke="#4d8fe0" stroke-width="2" stroke-linecap="round"/></svg>`,
+  hard:`<svg class="player-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="10" stroke="#9060e0" stroke-width="2"/><circle cx="16" cy="16" r="3" fill="#9060e0"/><line x1="16" y1="4" x2="16" y2="10" stroke="#9060e0" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="22" x2="16" y2="28" stroke="#9060e0" stroke-width="2" stroke-linecap="round"/><line x1="4" y1="16" x2="10" y2="16" stroke="#9060e0" stroke-width="2" stroke-linecap="round"/><line x1="22" y1="16" x2="28" y2="16" stroke="#9060e0" stroke-width="2" stroke-linecap="round"/></svg>`
+};
+const LEVELS={
+  1:{name:'EASY',cls:'easy',rows:5,cols:5,grid:[['#','#','#','#','#'],['#','.','.', '.','#'],['#','.','#','E','#'],['#','.','.', '.','#'],['#','#','#','#','#']],start:{r:1,c:1},exit:{r:2,c:3},exitIcon:'🔓'},
+  2:{name:'MEDIUM',cls:'medium',rows:7,cols:7,grid:[['#','#','#','#','#','#','#'],['#','.','.','.','#','.','#'],['#','#','#','.','#','.','#'],['#','.','.','.','.', '.','#'],['#','.','#','#','#','.','#'],['#','.','.','.','.', '.','E'],['#','#','#','#','#','#','#']],start:{r:1,c:1},exit:{r:5,c:6},exitIcon:'🧩'},
+  3:{name:'HARD',cls:'hard',rows:9,cols:9,grid:[['#','#','#','#','#','#','#','#','#'],['#','.','#','.','.', '.','#','.','#'],['#','.','#','.','#', '.','#','.','#'],['#','.','.','.',  '#','.','.', '.','#'],['#','#','#','.','#','#','#','.','#'],['#','.','.','.','.', '.','#','.','#'],['#','.','#','#','#','.','#','.','#'],['#','.','.','.','.', '.','.', '.','E'],['#','#','#','#','#','#','#','#','#']],start:{r:1,c:1},exit:{r:7,c:8},exitIcon:'🔮'}
+};
+let curLv=1,player={r:1,c:1},stack=[],trail=new Set(),won=false,grid=[];
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo({top:0,behavior:'smooth'});}
+function goBack(){showScreen('screen-select');}
+function startLevel(lv){curLv=lv;const n=document.getElementById('game-lv-name');n.textContent=LEVELS[lv].name;n.className='game-lv-name '+LEVELS[lv].cls;grid=LEVELS[lv].grid.map(r=>[...r]);player={...LEVELS[lv].start};stack=[];trail=new Set();won=false;showMsg('');showScreen('screen-game');render();updateCounter();}
+function restartLevel(){const lv=LEVELS[curLv];grid=lv.grid.map(r=>[...r]);player={...lv.start};stack=[];trail=new Set();won=false;showMsg('');showScreen('screen-game');render();updateCounter();}
+function key(r,c){return r+','+c;}
+function render(){const lv=LEVELS[curLv];const g=document.getElementById('maze-grid');const sz=lv.cols<=5?62:lv.cols<=7?52:42;const fsz=lv.cols<=5?22:lv.cols<=7?18:14;g.style.gridTemplateColumns=`repeat(${lv.cols},${sz}px)`;g.innerHTML='';for(let r=0;r<lv.rows;r++){for(let c=0;c<lv.cols;c++){const d=document.createElement('div');d.className='cell';d.style.width=sz+'px';d.style.height=sz+'px';d.style.fontSize=fsz+'px';const isP=r===player.r&&c===player.c;const isE=r===lv.exit.r&&c===lv.exit.c;const isW=grid[r][c]==='#';const isT=trail.has(key(r,c));if(isP){d.classList.add('cell-player');d.innerHTML=PLAYER_SVG[lv.cls];}else if(isE){d.classList.add('cell-exit',lv.cls);d.textContent=lv.exitIcon;}else if(isW){d.classList.add('cell-wall');}else if(isT){d.classList.add('cell-trail');d.textContent='·';}else{d.classList.add('cell-path');}g.appendChild(d);}}}
+function showMsg(msg,type){const el=document.getElementById('msg-box');if(!msg){el.className='';el.style.display='none';return;}el.textContent=msg;el.className='show '+(type||'warn');el.style.display='block';}
+function updateCounter(){document.getElementById('move-counter').textContent=String(stack.length).padStart(2,'0')+' moves';}
+function showResult(type){const lv=LEVELS[curLv];const card=document.getElementById('result-card');const icon=document.getElementById('result-icon');const label=document.getElementById('result-label');const hl=document.getElementById('result-headline');const stats=document.getElementById('result-stats');const det=document.getElementById('result-detail');card.className='result-card '+(type==='win'?'win-card':'loss-card');if(type==='win'){icon.textContent='✔';label.textContent='// mission complete';hl.textContent='YOU WON';det.textContent='The stack has been cleared. Well played.';stats.innerHTML=`<div class="stat-pill">LEVEL: ${lv.name}</div><div class="stat-pill">MOVES: ${stack.length}</div>`;}else{icon.textContent='✘';label.textContent='// path blocked';hl.textContent='YOU LOST';det.textContent='Regroup. Reload. Escape.';stats.innerHTML=`<div class="stat-pill">LEVEL: ${lv.name}</div><div class="stat-pill">MOVES: ${stack.length}</div>`;}showScreen('screen-result');}
+function move(dr,dc){if(won)return;const lv=LEVELS[curLv];const nr=player.r+dr,nc=player.c+dc;if(nr<0||nr>=lv.rows||nc<0||nc>=lv.cols){showMsg('// out of bounds','err');return;}if(grid[nr][nc]==='#'){showResult('loss');return;}showMsg('');stack.push({...player});trail.add(key(player.r,player.c));player={r:nr,c:nc};render();updateCounter();if(nr===lv.exit.r&&nc===lv.exit.c){won=true;showResult('win');}}
+function undoMove(){if(won)return;if(!stack.length){showMsg('// nothing to undo','warn');return;}const prev=stack.pop();trail.delete(key(prev.r,prev.c));player=prev;showMsg('');render();updateCounter();}
+document.addEventListener('keydown',function(e){if(!document.getElementById('screen-game').classList.contains('active'))return;const t=document.activeElement.tagName;if(t==='INPUT'||t==='TEXTAREA')return;if(e.key==='w'||e.key==='W'||e.key==='ArrowUp'){e.preventDefault();move(-1,0);}else if(e.key==='s'||e.key==='S'||e.key==='ArrowDown'){e.preventDefault();move(1,0);}else if(e.key==='a'||e.key==='A'||e.key==='ArrowLeft'){e.preventDefault();move(0,-1);}else if(e.key==='d'||e.key==='D'||e.key==='ArrowRight'){e.preventDefault();move(0,1);}else if(e.key==='u'||e.key==='U'){e.preventDefault();undoMove();}});
+</script>
+</body>
+</html>
