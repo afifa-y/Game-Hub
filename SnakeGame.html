@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Snake Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #00ff88; --green-dim: #00cc66;
+      --bg: #080808; --surface: #0d0d0d; --border: #1a1a1a; --muted: #444;
+    }
+    html, body {
+      background: var(--bg); min-height: 100vh;
+      color: #fff; font-family: 'Share Tech Mono', monospace;
+      overflow-x: hidden; touch-action: manipulation;
+    }
+    #app {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 16px 12px 40px; gap: 12px;
+    }
+    #title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(22px, 7vw, 36px); font-weight: 700;
+      letter-spacing: 6px; color: var(--green); text-align: center;
+    }
+    #hud { display: flex; gap: 12px; }
+    .hud-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 16px; text-align: center; min-width: 70px;
+    }
+    .hud-label { font-size: 12px; color: var(--muted); letter-spacing: 2px; }
+    .hud-val   { font-size: clamp(18px, 5vw, 24px); font-weight: 700; color: var(--green); }
+    #canvas-wrap {
+      position: relative; border: 1.5px solid var(--border);
+      border-radius: 12px; overflow: hidden; background: #050505;
+    }
+    canvas { display: block; }
+    #overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.92); border-radius: 12px; gap: 14px;
+    }
+    #overlay h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(14px, 4vw, 20px); color: var(--green); letter-spacing: 3px;
+    }
+    #overlay p { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-align: center; padding: 0 12px; }
+    #ol-score  { font-size: clamp(34px, 10vw, 54px); color: #fff; font-weight: 700; display: none; }
+    #btn {
+      font-family: 'Share Tech Mono', monospace;
+      background: var(--green); color: #000; border: none;
+      padding: 12px 32px; border-radius: 6px; font-size: 14px;
+      letter-spacing: 2px; cursor: pointer; font-weight: 700; transition: transform .1s;
+    }
+    #btn:active { transform: scale(0.96); }
+    .qcell {
+      width: 24px; height: 24px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; border: 1px solid; transition: all .12s;
+    }
+    .qcell.head { background: var(--green); color: #000; border-color: var(--green); }
+    .qcell.body { background: #0a2a18; color: var(--green-dim); border-color: #0e3a22; }
+    .qcell.tail { background: #0a1a10; color: #005522; border-color: #0a1a10; opacity: .55; }
+    #dpad {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px; margin-top: 4px;
+    }
+    .dp-row { display: flex; gap: 4px; }
+    .dp-btn {
+      width: clamp(54px, 15vw, 68px); height: clamp(54px, 15vw, 68px);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--green);
+      font-size: clamp(22px, 5vw, 28px);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none; -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .1s, transform .1s;
+    }
+    .dp-btn:active { background: #0a2a18; transform: scale(0.92); }
+    .dp-spacer { width: clamp(54px, 15vw, 68px); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="title">SNAKE GAME</div>
+  <div id="hud">
+    <div class="hud-box"><div class="hud-label">SCORE</div><div class="hud-val" id="score">0</div></div>
+    <div class="hud-box"><div class="hud-label">LENGTH</div><div class="hud-val" id="length">1</div></div>
+    <div class="hud-box"><div class="hud-label">BEST</div><div class="hud-val" id="best">0</div></div>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div id="overlay">
+      <h2 id="ol-title">SNAKE GAME</h2>
+      <p id="ol-sub">Arrow keys | D-pad below | Swipe on screen</p>
+      <div id="ol-score"></div>
+      <button id="btn" onclick="startGame()">START GAME</button>
+    </div>
+  </div>
+  <div id="dpad">
+    <div class="dp-row">
+      <div class="dp-spacer"></div>
+      <button class="dp-btn" id="dbtn-up">&#8593;</button>
+      <div class="dp-spacer"></div>
+    </div>
+    <div class="dp-row">
+      <button class="dp-btn" id="dbtn-left">&#8592;</button>
+      <button class="dp-btn" id="dbtn-down">&#8595;</button>
+      <button class="dp-btn" id="dbtn-right">&#8594;</button>
+    </div>
+  </div>
+</div>
+<script>
+  class Queue {
+    constructor()  { this.data = []; }
+    enqueue(val)   { this.data.unshift(val); }
+    dequeue()      { return this.data.pop(); }
+    peek()         { return this.data[0]; }
+    get size()     { return this.data.length; }
+    toArray()      { return [...this.data]; }
+    isEmpty()      { return this.data.length === 0; }
+  }
+
+  const COLS = 21, ROWS = 21;
+  const wrap   = document.getElementById('canvas-wrap');
+  const canvas = document.getElementById('c');
+  const ctx    = canvas.getContext('2d');
+
+  function calcSize() {
+    const maxW = Math.min(window.innerWidth - 28, 480);
+    const sz   = Math.floor(maxW / COLS) * COLS;
+    canvas.width  = sz;
+    canvas.height = sz;
+    wrap.style.width  = sz + 'px';
+    wrap.style.height = sz + 'px';
+  }
+  calcSize();
+  window.addEventListener('resize', () => { calcSize(); if (!running) draw(); });
+
+  const CW = () => canvas.width  / COLS;
+  const CH = () => canvas.height / ROWS;
+
+  let snake, dir, nextDir, food, score, best = 0, running = false, gameLoop;
+
+  function randomFood() {
+    let pos;
+    const body = snake.toArray();
+    do {
+      pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+    } while (body.some(s => s.x === pos.x && s.y === pos.y));
+    return pos;
+  }
+
+  function setDir(dx, dy) {
+    if (dx ===  1 && dir.dx === -1) return;
+    if (dx === -1 && dir.dx ===  1) return;
+    if (dy ===  1 && dir.dy === -1) return;
+    if (dy === -1 && dir.dy ===  1) return;
+    nextDir = { dx, dy };
+  }
+
+  function startGame() {
+    snake   = new Queue();
+    snake.enqueue({ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) });
+    dir     = { dx: 1, dy: 0 };
+    nextDir = { dx: 1, dy: 0 };
+    food    = randomFood();
+    score   = 0;
+    running = true;
+    document.getElementById('score').textContent  = '0';
+    document.getElementById('length').textContent = '1';
+    document.getElementById('overlay').style.display = 'none';
+    clearInterval(gameLoop);
+    gameLoop = setInterval(tick, 130);
+    draw();
+  }
+
+  function tick() {
+    if (!running) return;
+    dir = nextDir;
+    const head = snake.peek();
+    const nx   = head.x + dir.dx;
+    const ny   = head.y + dir.dy;
+    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) { endGame(); return; }
+    if (snake.toArray().some(s => s.x === nx && s.y === ny)) { endGame(); return; }
+    snake.enqueue({ x: nx, y: ny });
+    const ateFood = (nx === food.x && ny === food.y);
+    if (!ateFood) {
+      snake.dequeue();
+    } else {
+      score += 10;
+      food   = randomFood();
+      if (score > best) best = score;
+      document.getElementById('best').textContent = best;
+    }
+    document.getElementById('score').textContent  = score;
+    document.getElementById('length').textContent = snake.size;
+    draw();
+  }
+
+  function endGame() {
+    running = false;
+    clearInterval(gameLoop);
+    document.getElementById('ol-title').textContent = 'GAME OVER';
+    document.getElementById('ol-sub').textContent   = 'FINAL SCORE';
+    const os = document.getElementById('ol-score');
+    os.style.display = 'block';
+    os.textContent   = score;
+    document.getElementById('btn').textContent = 'PLAY AGAIN';
+    document.getElementById('overlay').style.display = 'flex';
+  }
+
+  function draw() {
+    const W = canvas.width, H = canvas.height;
+    const cw = CW(), ch = CH();
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#0e0e0e';
+    ctx.lineWidth   = 0.5;
+    for (let x = 0; x < COLS; x++)
+      for (let y = 0; y < ROWS; y++)
+        ctx.strokeRect(x * cw, y * ch, cw, ch);
+    if (!snake) return;
+    const arr = snake.toArray();
+    arr.forEach((seg, i) => {
+      const isHead = (i === 0);
+      const t = i / arr.length;
+      if (isHead) {
+        ctx.fillStyle = '#00ff88';
+      } else {
+        const g = Math.floor(255 * (1 - t * 0.78));
+        ctx.fillStyle = 'rgb(0,' + g + ',' + Math.floor(g * 0.42) + ')';
+      }
+      const pad = isHead ? 1 : 2;
+      ctx.beginPath();
+      ctx.roundRect(seg.x * cw + pad, seg.y * ch + pad, cw - pad * 2, ch - pad * 2, isHead ? 4 : 2);
+      ctx.fill();
+      if (isHead) {
+        ctx.fillStyle = '#000';
+        const cx = seg.x * cw + cw / 2, cy = seg.y * ch + ch / 2;
+        const ex = dir.dx, ey = dir.dy;
+        const r  = Math.max(1.5, cw * 0.11);
+        ctx.beginPath(); ctx.arc(cx + ex*cw*0.22 + ey*cw*0.18, cy + ey*ch*0.22 + ex*ch*0.18, r, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + ex*cw*0.22 - ey*cw*0.18, cy + ey*ch*0.22 - ex*ch*0.18, r, 0, Math.PI*2); ctx.fill();
+      }
+    });
+    const fx = food.x * cw + cw / 2, fy = food.y * ch + ch / 2, fr = cw * 0.36;
+    ctx.fillStyle = '#ff3333';
+    ctx.beginPath(); ctx.arc(fx, fy, fr, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff9999';
+    ctx.beginPath(); ctx.arc(fx - fr*0.3, fy - fr*0.32, fr*0.28, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#44ff88';
+    ctx.fillRect(fx - 1, fy - fr - 5, 2, 6);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (!running) return;
+    const map = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] };
+    if (map[e.key]) { const [dx,dy] = map[e.key]; setDir(dx,dy); e.preventDefault(); }
+  });
+
+  function bindDpad(id, dx, dy) {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', e => { e.preventDefault(); setDir(dx, dy); }, { passive: false });
+    el.addEventListener('mousedown', () => setDir(dx, dy));
+  }
+  bindDpad('dbtn-up',    0, -1);
+  bindDpad('dbtn-down',  0,  1);
+  bindDpad('dbtn-left', -1,  0);
+  bindDpad('dbtn-right', 1,  0);
+
+  let swipeStartX = 0, swipeStartY = 0;
+  canvas.addEventListener('touchstart', e => {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchend', e => {
+    if (!running) return;
+    const dx    = e.changedTouches[0].clientX - swipeStartX;
+    const dy    = e.changedTouches[0].clientY - swipeStartY;
+    const absDx = Math.abs(dx), absDy = Math.abs(dy);
+    if (Math.max(absDx, absDy) < 20) return;
+    if (absDx > absDy) setDir(dx > 0 ? 1 : -1, 0);
+    else               setDir(0, dy > 0 ? 1 : -1);
+    e.preventDefault();
+  }, { passive: false });
+
+  snake = new Queue();
+  snake.enqueue({ x: Math.floor(COLS / 2), y: Math.floor(ROWS / 2) });
+  dir  = { dx: 1, dy: 0 };
+  food = { x: Math.floor(COLS / 2) + 4, y: Math.floor(ROWS / 2) };
+  draw();
+</script>
+</body>
+</html>
